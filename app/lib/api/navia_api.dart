@@ -1,10 +1,8 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 class NaviaApi {
   NaviaApi({required this.baseUrl});
-
   final String baseUrl;
 
   Future<List<PlaceResult>> searchPlaces({
@@ -16,22 +14,28 @@ class NaviaApi {
       queryParameters: {
         'q': query,
         'limit': '$limit',
-        ...?switch (nearLatLng) {
-          null => null,
-          final near => {'near': near},
-        },
+        'near': ?nearLatLng,
       },
     );
-    final res = await http.get(uri);
+    
+    final res = await http.get(uri).timeout(const Duration(seconds: 15));
     final body = utf8.decode(res.bodyBytes);
+    
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiError(res.statusCode, body);
     }
-    final json = jsonDecode(body) as Map<String, dynamic>;
-    final results = (json['results'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(PlaceResult.fromJson)
-        .toList(growable: false);
+    
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic> || !json.containsKey('results')) {
+      return [];
+    }
+    
+    final results = (json['results'] as List<dynamic>?)
+            ?.whereType<Map<String, dynamic>>()
+            .map(PlaceResult.fromJson)
+            .whereType<PlaceResult>()
+            .toList(growable: false) ?? [];
+            
     return results;
   }
 
@@ -45,24 +49,38 @@ class NaviaApi {
         'to': '${to.lat},${to.lng}',
       },
     );
-    final res = await http.get(uri);
+    
+    final res = await http.get(uri).timeout(const Duration(seconds: 15));
     final body = utf8.decode(res.bodyBytes);
+    
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiError(res.statusCode, body);
     }
-    final json = jsonDecode(body) as Map<String, dynamic>;
+    
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) {
+      throw FormatException('Invalid route response format');
+    }
+    
     return RouteResult.fromJson(json);
   }
 }
 
 class ApiError implements Exception {
   ApiError(this.statusCode, this.body);
-
   final int statusCode;
   final String body;
 
   @override
-  String toString() => 'ApiError($statusCode): $body';
+  String toString() {
+    try {
+      final json = jsonDecode(body);
+      if (json is Map && json.containsKey('error')) {
+        return json['error'].toString();
+      }
+    } catch (_) {}
+    return 'ApiError($statusCode): Something went wrong';
+  }
 }
 
 class PlaceResult {
@@ -80,29 +98,34 @@ class PlaceResult {
   final GeoPoint? center;
   final List<String> categories;
 
-  factory PlaceResult.fromJson(Map<String, dynamic> json) {
-    final center = json['center'];
-    return PlaceResult(
-      id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? '').toString(),
-      placeName: (json['placeName'] ?? '').toString(),
-      center: center is Map<String, dynamic>
-          ? GeoPoint(
-              lat: (center['lat'] as num?)?.toDouble() ?? 0,
-              lng: (center['lng'] as num?)?.toDouble() ?? 0,
-            )
-          : null,
-      categories: (json['categories'] as List<dynamic>? ?? const [])
-          .map((e) => e.toString())
-          .where((s) => s.trim().isNotEmpty)
-          .toList(growable: false),
-    );
+  static PlaceResult? fromJson(Map<String, dynamic> json) {
+    try {
+      final centerMap = json['center'];
+      GeoPoint? center;
+      if (centerMap is Map<String, dynamic>) {
+        final lat = (centerMap['lat'] as num?)?.toDouble() ?? 0.0;
+        final lng = (centerMap['lng'] as num?)?.toDouble() ?? 0.0;
+        center = GeoPoint(lat: lat, lng: lng);
+      }
+
+      return PlaceResult(
+        id: (json['id'] ?? '').toString(),
+        name: (json['name'] ?? '').toString(),
+        placeName: (json['placeName'] ?? '').toString(),
+        center: center,
+        categories: (json['categories'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .where((s) => s.trim().isNotEmpty)
+                .toList(growable: false) ?? const [],
+      );
+    } catch (_) {
+      return null; // Skip malformed places
+    }
   }
 }
 
 class GeoPoint {
   GeoPoint({required this.lat, required this.lng});
-
   final double lat;
   final double lng;
 }
@@ -120,4 +143,3 @@ class RouteResult {
     );
   }
 }
-

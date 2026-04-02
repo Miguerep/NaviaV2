@@ -2,9 +2,6 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class SpeechService {
-  SpeechService._();
-  static final SpeechService instance = SpeechService._();
-
   final FlutterTts _tts = FlutterTts();
   final SpeechToText _stt = SpeechToText();
 
@@ -39,4 +36,3 @@ class SpeechService {
     await _stt.stop();
   }
 }
-

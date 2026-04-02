@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
 
 class TripDatesScreen extends StatefulWidget {
-  const TripDatesScreen({
-    super.key,
-    required this.destination,
-    required this.onSelected,
-  });
-
-  final String destination;
-  final ValueChanged<DateTimeRange> onSelected;
+  const TripDatesScreen({super.key});
 
   @override
   State<TripDatesScreen> createState() => _TripDatesScreenState();
@@ -49,6 +45,8 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
   @override
   Widget build(BuildContext context) {
     final range = _range;
+    final destination = context.watch<TripProvider>().destination ?? '';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Dates'),
@@ -78,7 +76,7 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
                   const Icon(Icons.calendar_today, size: 18),
                   const SizedBox(width: 10),
                   Text(
-                    'Trip to ${widget.destination}',
+                    'Trip to $destination',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: NaviaThemeTokens.onSurface,
                         ),
@@ -128,7 +126,12 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
             ),
             const Spacer(),
             FilledButton(
-              onPressed: range == null ? null : () => widget.onSelected(range),
+              onPressed: range == null
+                  ? null
+                  : () {
+                      context.read<TripProvider>().setDates(range);
+                      context.go('/app/explore');
+                    },
               child: const Text('Continue'),
             ),
             const SizedBox(height: 24),
@@ -144,4 +147,3 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
     return '${dt.year}-$mm-$dd';
   }
 }
-

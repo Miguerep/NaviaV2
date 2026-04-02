@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
+import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({
-    super.key,
-    required this.destination,
-    required this.tripDates,
-    required this.settings,
-    required this.onResetTrip,
-  });
-
-  final String? destination;
-  final DateTimeRange? tripDates;
-  final AppSettings settings;
-  final VoidCallback onResetTrip;
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -28,20 +19,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _sliderTextSize = widget.settings.textScale <= 1.01
-        ? 1
-        : widget.settings.textScale <= 1.2
-            ? 2
-            : 3;
-    _sliderVoice = widget.settings.voiceSpeed <= 0.45
-        ? 1
-        : widget.settings.voiceSpeed <= 0.6
-            ? 2
-            : 3;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = context.read<AppSettings>();
+      setState(() {
+        _sliderTextSize = settings.textScale <= 1.01
+            ? 1
+            : settings.textScale <= 1.2
+                ? 2
+                : 3;
+        _sliderVoice = settings.voiceSpeed <= 0.45
+            ? 1
+            : settings.voiceSpeed <= 0.6
+                ? 2
+                : 3;
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<AppSettings>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -104,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   max: 3,
                   onChanged: (v) {
                     setState(() => _sliderTextSize = v);
-                    widget.settings.setTextScale(v);
+                    settings.setTextScale(v);
                   },
                 ),
                 const SizedBox(height: 22),
@@ -123,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   max: 3,
                   onChanged: (v) {
                     setState(() => _sliderVoice = v);
-                    widget.settings.setVoiceSpeed(v);
+                    settings.setVoiceSpeed(v);
                   },
                 ),
                 const SizedBox(height: 22),
@@ -152,10 +149,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       Switch(
-                        value: widget.settings.highContrast,
+                        value: settings.highContrast,
                         onChanged: (v) {
-                          setState(() {});
-                          widget.settings.setHighContrast(v);
+                          settings.setHighContrast(v);
                         },
                       ),
                     ],
@@ -178,7 +174,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.tonal(
-            onPressed: widget.onResetTrip,
+            onPressed: () {
+              context.read<TripProvider>().reset();
+            },
             child: const Text('Reset trip (go to onboarding)'),
           ),
           const SizedBox(height: 12),
@@ -310,4 +308,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

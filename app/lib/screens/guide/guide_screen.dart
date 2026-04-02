@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
 
 class GuideScreen extends StatefulWidget {
-  const GuideScreen({super.key, required this.destination, required this.tripDates});
-
-  final String? destination;
-  final DateTimeRange? tripDates;
+  const GuideScreen({super.key});
 
   @override
   State<GuideScreen> createState() => _GuideScreenState();
@@ -17,7 +15,7 @@ class GuideScreen extends StatefulWidget {
 class _GuideScreenState extends State<GuideScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _speech = SpeechService.instance;
+  late SpeechService _speech;
   bool _isListening = false;
 
   final List<_ChatMsg> _msgs = [
@@ -28,9 +26,18 @@ class _GuideScreenState extends State<GuideScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _speech = context.read<SpeechService>();
+  }
+
+  @override
   void dispose() {
-    _speech.stopListening();
-    _speech.stopSpeaking();
+    // Only stop speaking if we were actively listening, otherwise let audio finish. 
+    // _speech.stopSpeaking();
+    if (_isListening) {
+      _speech.stopListening();
+    }
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -203,4 +210,3 @@ class _ChatMsg {
   static _ChatMsg user(String text) => _ChatMsg(true, text);
   static _ChatMsg assistant(String text) => _ChatMsg(false, text);
 }
-

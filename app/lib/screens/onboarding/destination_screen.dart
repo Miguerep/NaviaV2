@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
 
 class DestinationScreen extends StatefulWidget {
-  const DestinationScreen({super.key, required this.onSelected});
-
-  final ValueChanged<String> onSelected;
+  const DestinationScreen({super.key});
 
   @override
   State<DestinationScreen> createState() => _DestinationScreenState();
@@ -23,14 +24,15 @@ class _DestinationScreenState extends State<DestinationScreen> {
   void _submit(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
-    widget.onSelected(trimmed);
+    context.read<TripProvider>().setDestination(trimmed);
+    context.go('/onboarding/dates');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Step 3 of 3'),
+        title: const Text('Step 1 of 2'),
       ),
       body: Padding(
         padding: NaviaThemeTokens.pagePadding,
@@ -84,7 +86,7 @@ class _DestinationScreenState extends State<DestinationScreen> {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Start My Journey'),
+                  Text('Next Step'),
                   SizedBox(width: 8),
                   Icon(Icons.chevron_right),
                 ],
@@ -99,7 +101,7 @@ class _DestinationScreenState extends State<DestinationScreen> {
 
   Widget _chip(BuildContext context, String label) {
     return InkWell(
-      onTap: () => widget.onSelected(label),
+      onTap: () => _submit(label),
       borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -117,4 +119,3 @@ class _DestinationScreenState extends State<DestinationScreen> {
     );
   }
 }
-

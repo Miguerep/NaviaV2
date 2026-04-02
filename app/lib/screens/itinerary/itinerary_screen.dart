@@ -1,32 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
+import '../../providers/trip_provider.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
 
-class ItineraryScreen extends StatefulWidget {
-  const ItineraryScreen({super.key, required this.destination, required this.tripDates});
-
-  final String? destination;
-  final DateTimeRange? tripDates;
-
-  @override
-  State<ItineraryScreen> createState() => _ItineraryScreenState();
-}
-
-class _ItineraryScreenState extends State<ItineraryScreen> {
-  final _speech = SpeechService.instance;
-
-  @override
-  void dispose() {
-    _speech.stopSpeaking();
-    super.dispose();
-  }
+class ItineraryScreen extends StatelessWidget {
+  const ItineraryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
-    final destination = widget.destination;
+    final destination = context.watch<TripProvider>().destination;
+    final speech = context.read<SpeechService>();
+    
     final items = [
       ('09:30', 'The Louvre Museum', 'Glass Pyramid Entrance'),
       ('11:45', 'Jardin des Tuileries', 'Historic Garden Walk'),
@@ -126,7 +114,7 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
                     fixedSize: const Size(56, 56),
                   ),
                   onPressed: () {
-                    _speech.speak(
+                    speech.speak(
                       '$title. $subtitle.',
                       speed: settings.voiceSpeed,
                     );
@@ -142,4 +130,3 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
     );
   }
 }
-
