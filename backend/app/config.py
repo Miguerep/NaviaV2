@@ -10,6 +10,10 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./backend.db"
     mapbox_token: str | None = None
+    allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8787",
+    ]
 
 
 settings = Settings()

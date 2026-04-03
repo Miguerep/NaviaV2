@@ -9,8 +9,8 @@ from app.routers import chat, itinerary, places, trips
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
-    """Startup / shutdown lifecycle hook."""
+async def lifespan(app: FastAPI):
+    """Create tables on startup (replaces deprecated @app.on_event)."""
     create_db_and_tables()
     yield
 
@@ -19,21 +19,19 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# ── Health check (kept inline — it's a single line) ────────────────
-@app.get("/health")
-def health():
-    return {"ok": True, "env": settings.app_env}
-
-
-# ── Register routers ──────────────────────────────────────────────
+# ── Routers ──────────────────────────────────────────────
 app.include_router(trips.router)
 app.include_router(itinerary.router)
 app.include_router(chat.router)
 app.include_router(places.router)
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "env": settings.app_env}

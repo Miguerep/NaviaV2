@@ -23,7 +23,10 @@ async def search_places(q: str, near: str | None, limit: int) -> dict | JSONResp
         "autocomplete": "true",
     }
     if near:
-        lat, lng = near.split(",")
+        try:
+            lat, lng = near.split(",")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="BAD_NEAR_FORMAT") from exc
         params["proximity"] = f"{lng},{lat}"
 
     async with httpx.AsyncClient(timeout=20.0) as client:

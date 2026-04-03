@@ -15,20 +15,17 @@ router = APIRouter(prefix="/v1", tags=["chat"])
 
 @router.post("/chat")
 async def chat(payload: ChatRequest, session: Session = Depends(get_session)):
-    trip_service.get_trip_or_404(session, payload.tripId)
+    # Offload all synchronous DB work to a thread so we don't block the event loop
+    def _db_work():
+        trip_service.get_trip_or_404(session, payload.tripId)
+        chat_service.save_message(session, payload.tripId, ChatRole.user, payload.userMessage)
+        actions = chat_service.build_actions(payload.userMessage)
+        assistant_text = chat_service.generate_assistant_reply(actions)
+        chat_service.apply_actions(session, payload.tripId, payload.activeDate, actions)
+        chat_service.save_message(session, payload.tripId, ChatRole.assistant, assistant_text)
+        return actions, assistant_text
 
-    # Persist user message
-    chat_service.save_message(session, payload.tripId, ChatRole.user, payload.userMessage)
-
-    # Determine actions & reply
-    actions = chat_service.build_actions(payload.userMessage)
-    assistant_text = chat_service.generate_assistant_reply(actions)
-
-    # Apply side-effects (e.g. replace day stops)
-    chat_service.apply_actions(session, payload.tripId, payload.activeDate, actions)
-
-    # Persist assistant reply
-    chat_service.save_message(session, payload.tripId, ChatRole.assistant, assistant_text)
+    actions, assistant_text = await asyncio.to_thread(_db_work)
 
     # Stream the response word-by-word via SSE
     async def event_stream():

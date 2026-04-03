@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from sqlmodel import Session
 
@@ -53,7 +54,7 @@ def save_message(session: Session, trip_id: str, role: ChatRole, content: str) -
     session.commit()
 
 
-def apply_actions(session: Session, trip_id: str, active_date: str, actions: list[dict]) -> None:
+def apply_actions(session: Session, trip_id: str, active_date: date, actions: list[dict]) -> None:
     """Apply side-effects for recognised action types."""
     replace_action = next((a for a in actions if a.get("type") == "ReplaceDayPlan"), None)
     if replace_action:

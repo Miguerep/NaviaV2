@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.models import Trip
-from app.schemas import CreateTripRequest, parse_date
+from app.schemas import CreateTripRequest
 
 
 def create_trip(session: Session, payload: CreateTripRequest) -> dict:
@@ -12,8 +12,8 @@ def create_trip(session: Session, payload: CreateTripRequest) -> dict:
     trip = Trip(
         id=uuid.uuid4().hex,
         destination=payload.destination,
-        start_date=parse_date(payload.startDate),
-        end_date=parse_date(payload.endDate),
+        start_date=payload.startDate,
+        end_date=payload.endDate,
     )
     session.add(trip)
     session.commit()

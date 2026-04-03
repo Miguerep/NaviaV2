@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app.db import get_session
@@ -11,7 +13,11 @@ router = APIRouter(prefix="/v1/itinerary", tags=["itinerary"])
 @router.get("/{trip_id}/{day}")
 def get_day_plan(trip_id: str, day: str, session: Session = Depends(get_session)):
     trip_service.get_trip_or_404(session, trip_id)
-    return itinerary_service.get_day_plan_response(session, trip_id, day)
+    try:
+        plan_day = date.fromisoformat(day[:10])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="INVALID_DATE_FORMAT") from exc
+    return itinerary_service.get_day_plan_response(session, trip_id, plan_day)
 
 
 @router.post("/{trip_id}/regenerate")

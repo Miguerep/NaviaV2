@@ -1,14 +1,13 @@
 import uuid
+from datetime import date
 
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from app.models import DayPlan, Stop
-from app.schemas import parse_date
 
 
-def get_or_create_day_plan(session: Session, trip_id: str, day_iso: str) -> DayPlan:
+def get_or_create_day_plan(session: Session, trip_id: str, plan_day: date) -> DayPlan:
     """Return an existing DayPlan or create a new one with default stops."""
-    plan_day = parse_date(day_iso)
     plan = session.exec(
         select(DayPlan).where(DayPlan.trip_id == trip_id, DayPlan.day == plan_day)
     ).first()
@@ -36,9 +35,9 @@ def get_or_create_day_plan(session: Session, trip_id: str, day_iso: str) -> DayP
     return plan
 
 
-def get_day_plan_response(session: Session, trip_id: str, day_iso: str) -> dict:
+def get_day_plan_response(session: Session, trip_id: str, plan_day: date) -> dict:
     """Build the full day-plan JSON response."""
-    plan = get_or_create_day_plan(session, trip_id, day_iso)
+    plan = get_or_create_day_plan(session, trip_id, plan_day)
     stops = session.exec(
         select(Stop).where(Stop.day_plan_id == plan.id).order_by(Stop.ordinal)
     ).all()
@@ -61,9 +60,8 @@ def get_day_plan_response(session: Session, trip_id: str, day_iso: str) -> dict:
     }
 
 
-def regenerate_day_plan(session: Session, trip_id: str, day_iso: str) -> dict:
+def regenerate_day_plan(session: Session, trip_id: str, plan_day: date) -> dict:
     """Delete existing stops for the day and insert new ones, then return the updated plan."""
-    plan_day = parse_date(day_iso)
     plan = session.exec(
         select(DayPlan).where(DayPlan.trip_id == trip_id, DayPlan.day == plan_day)
     ).first()
@@ -85,12 +83,11 @@ def regenerate_day_plan(session: Session, trip_id: str, day_iso: str) -> dict:
     session.add_all(new_stops)
     session.commit()
 
-    return get_day_plan_response(session, trip_id, day_iso)
+    return get_day_plan_response(session, trip_id, plan_day)
 
 
-def replace_stops(session: Session, trip_id: str, day_iso: str, stops_data: list[dict]) -> None:
+def replace_stops(session: Session, trip_id: str, plan_day: date, stops_data: list[dict]) -> None:
     """Replace a day's stops with the ones provided (used by chat actions)."""
-    plan_day = parse_date(day_iso)
     plan = session.exec(
         select(DayPlan).where(DayPlan.trip_id == trip_id, DayPlan.day == plan_day)
     ).first()
@@ -119,7 +116,6 @@ def replace_stops(session: Session, trip_id: str, day_iso: str, stops_data: list
 
 
 def _clear_stops(session: Session, day_plan_id: str) -> None:
-    old_stops = session.exec(select(Stop).where(Stop.day_plan_id == day_plan_id)).all()
-    for stop in old_stops:
-        session.delete(stop)
+    """Bulk-delete all stops for a day plan in a single statement."""
+    session.exec(delete(Stop).where(Stop.day_plan_id == day_plan_id))
     session.commit()
