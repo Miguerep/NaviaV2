@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../api/navia_api.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
 
@@ -14,6 +15,7 @@ class TripDatesScreen extends StatefulWidget {
 
 class _TripDatesScreenState extends State<TripDatesScreen> {
   DateTimeRange? _range;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -45,7 +47,8 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
   @override
   Widget build(BuildContext context) {
     final range = _range;
-    final destination = context.watch<TripProvider>().destination ?? '';
+    final trip = context.watch<TripProvider>();
+    final destination = trip.destination ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -126,13 +129,47 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
             ),
             const Spacer(),
             FilledButton(
-              onPressed: range == null
+              onPressed: (range == null || _submitting)
                   ? null
-                  : () {
-                      context.read<TripProvider>().setDates(range);
-                      context.go('/app/explore');
+                  : () async {
+                      final dest = trip.destination?.trim() ?? '';
+                      if (dest.isEmpty) return;
+                      setState(() => _submitting = true);
+                      try {
+                        trip.setDates(range);
+                        final api = context.read<NaviaApi>();
+                        final created = await api.createTrip(
+                          payload: CreateTripRequest(
+                            destination: dest,
+                            startDate: range.start,
+                            endDate: range.end,
+                            tripDuration: trip.tripDuration,
+                            interests: trip.interests.toList(growable: false),
+                            pace: trip.pace,
+                            startLat: trip.startLat,
+                            startLng: trip.startLng,
+                          ),
+                          acceptLanguage: trip.acceptLanguage,
+                        );
+                        trip.setTripId(created.id);
+                        if (!mounted) return;
+                        context.go('/app/explore');
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not create trip. Please try again.')),
+                        );
+                      } finally {
+                        if (mounted) setState(() => _submitting = false);
+                      }
                     },
-              child: const Text('Continue'),
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Continue'),
             ),
             const SizedBox(height: 24),
           ],

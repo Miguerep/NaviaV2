@@ -5,20 +5,34 @@ class NaviaApi {
   NaviaApi({required this.baseUrl});
   final String baseUrl;
 
+  Map<String, String> _headers({String? acceptLanguage}) {
+    final headers = <String, String>{
+      'Content-Type': 'application/json; charset=utf-8',
+    };
+    final lang = acceptLanguage?.trim();
+    if (lang != null && lang.isNotEmpty) {
+      headers['Accept-Language'] = lang;
+    }
+    return headers;
+  }
+
   Future<List<PlaceResult>> searchPlaces({
     required String query,
     String? nearLatLng,
     int limit = 5,
+    String? acceptLanguage,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/places/search').replace(
       queryParameters: {
         'q': query,
         'limit': '$limit',
-        'near': ?nearLatLng,
+        if (nearLatLng != null && nearLatLng.trim().isNotEmpty) 'near': nearLatLng,
       },
     );
     
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
+    final res = await http
+        .get(uri, headers: _headers(acceptLanguage: acceptLanguage))
+        .timeout(const Duration(seconds: 15));
     final body = utf8.decode(res.bodyBytes);
     
     if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -42,6 +56,7 @@ class NaviaApi {
   Future<RouteResult> getRouteWalking({
     required GeoPoint from,
     required GeoPoint to,
+    String? acceptLanguage,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/route').replace(
       queryParameters: {
@@ -50,7 +65,9 @@ class NaviaApi {
       },
     );
     
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
+    final res = await http
+        .get(uri, headers: _headers(acceptLanguage: acceptLanguage))
+        .timeout(const Duration(seconds: 15));
     final body = utf8.decode(res.bodyBytes);
     
     if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -63,6 +80,91 @@ class NaviaApi {
     }
     
     return RouteResult.fromJson(json);
+  }
+
+  Future<Trip> createTrip({
+    required CreateTripRequest payload,
+    String? acceptLanguage,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/trips');
+    final res = await http
+        .post(
+          uri,
+          headers: _headers(acceptLanguage: acceptLanguage),
+          body: jsonEncode(payload.toJson()),
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = utf8.decode(res.bodyBytes);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiError(res.statusCode, body);
+    }
+
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) {
+      throw const FormatException('Invalid createTrip response format');
+    }
+    final tripJson = json['trip'];
+    if (tripJson is! Map<String, dynamic>) {
+      throw const FormatException('Invalid createTrip response payload');
+    }
+    return Trip.fromJson(tripJson);
+  }
+
+  Future<DayPlan> getDayPlan({
+    required String tripId,
+    required DateTime day,
+    String? acceptLanguage,
+  }) async {
+    final yyyy = day.year.toString().padLeft(4, '0');
+    final mm = day.month.toString().padLeft(2, '0');
+    final dd = day.day.toString().padLeft(2, '0');
+    final dateIso = '$yyyy-$mm-$dd';
+    final uri = Uri.parse('$baseUrl/v1/itinerary/$tripId/$dateIso');
+
+    final res = await http
+        .get(uri, headers: _headers(acceptLanguage: acceptLanguage))
+        .timeout(const Duration(seconds: 20));
+    final body = utf8.decode(res.bodyBytes);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiError(res.statusCode, body);
+    }
+
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) {
+      throw const FormatException('Invalid itinerary response format');
+    }
+    final planJson = json['plan'];
+    if (planJson is! Map<String, dynamic>) {
+      throw const FormatException('Invalid itinerary response payload');
+    }
+    return DayPlan.fromJson(planJson);
+  }
+
+  Future<NarrationSummaryResponse> getNarrationSummary({
+    required NarrationSummaryRequest payload,
+    String? acceptLanguage,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/narration/summary');
+    final res = await http
+        .post(
+          uri,
+          headers: _headers(acceptLanguage: acceptLanguage),
+          body: jsonEncode(payload.toJson()),
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = utf8.decode(res.bodyBytes);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiError(res.statusCode, body);
+    }
+
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) {
+      throw const FormatException('Invalid narration response format');
+    }
+    return NarrationSummaryResponse.fromJson(json);
   }
 }
 
@@ -141,5 +243,171 @@ class RouteResult {
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
       durationSeconds: (json['durationSeconds'] as num?)?.toDouble(),
     );
+  }
+}
+
+class CreateTripRequest {
+  CreateTripRequest({
+    required this.destination,
+    required this.startDate,
+    required this.endDate,
+    required this.tripDuration,
+    required this.interests,
+    required this.pace,
+    this.startLat,
+    this.startLng,
+  });
+
+  final String destination;
+  final DateTime startDate;
+  final DateTime endDate;
+  final int tripDuration;
+  final List<String> interests;
+  final String pace;
+  final double? startLat;
+  final double? startLng;
+
+  Map<String, dynamic> toJson() => {
+        'destination': destination,
+        'startDate': _dateOnly(startDate),
+        'endDate': _dateOnly(endDate),
+        'tripDuration': tripDuration,
+        'interests': interests,
+        'pace': pace,
+        if (startLat != null) 'startLat': startLat,
+        if (startLng != null) 'startLng': startLng,
+      };
+
+  static String _dateOnly(DateTime dt) {
+    final yyyy = dt.year.toString().padLeft(4, '0');
+    final mm = dt.month.toString().padLeft(2, '0');
+    final dd = dt.day.toString().padLeft(2, '0');
+    return '$yyyy-$mm-$dd';
+  }
+}
+
+class Trip {
+  Trip({
+    required this.id,
+    required this.destination,
+    required this.startDate,
+    required this.endDate,
+    required this.tripDuration,
+    required this.interests,
+    required this.pace,
+    this.startLat,
+    this.startLng,
+  });
+
+  final String id;
+  final String destination;
+  final DateTime startDate;
+  final DateTime endDate;
+  final int? tripDuration;
+  final List<String> interests;
+  final String? pace;
+  final double? startLat;
+  final double? startLng;
+
+  factory Trip.fromJson(Map<String, dynamic> json) {
+    return Trip(
+      id: (json['id'] ?? '').toString(),
+      destination: (json['destination'] ?? '').toString(),
+      startDate: DateTime.tryParse((json['startDate'] ?? '').toString()) ??
+          DateTime(1970),
+      endDate:
+          DateTime.tryParse((json['endDate'] ?? '').toString()) ?? DateTime(1970),
+      tripDuration: (json['tripDuration'] as num?)?.toInt(),
+      interests: (json['interests'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .where((s) => s.trim().isNotEmpty)
+              .toList(growable: false) ??
+          const [],
+      pace: (json['pace'] as String?)?.toString(),
+      startLat: (json['startLat'] as num?)?.toDouble(),
+      startLng: (json['startLng'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class DayPlan {
+  DayPlan({
+    required this.id,
+    required this.tripId,
+    required this.date,
+    required this.stops,
+  });
+
+  final String id;
+  final String tripId;
+  final DateTime date;
+  final List<Stop> stops;
+
+  factory DayPlan.fromJson(Map<String, dynamic> json) {
+    final stopsJson = json['stops'];
+    return DayPlan(
+      id: (json['id'] ?? '').toString(),
+      tripId: (json['tripId'] ?? '').toString(),
+      date: DateTime.tryParse((json['date'] ?? '').toString()) ?? DateTime(1970),
+      stops: (stopsJson is List)
+          ? stopsJson
+              .whereType<Map<String, dynamic>>()
+              .map(Stop.fromJson)
+              .toList(growable: false)
+          : const [],
+    );
+  }
+}
+
+class Stop {
+  Stop({
+    required this.id,
+    required this.ordinal,
+    required this.title,
+    this.subtitle,
+    this.startTimeLocal,
+  });
+
+  final String id;
+  final int ordinal;
+  final String title;
+  final String? subtitle;
+  final String? startTimeLocal;
+
+  factory Stop.fromJson(Map<String, dynamic> json) {
+    return Stop(
+      id: (json['id'] ?? '').toString(),
+      ordinal: (json['ordinal'] as num?)?.toInt() ?? 0,
+      title: (json['title'] ?? '').toString(),
+      subtitle: (json['subtitle'] as String?)?.toString(),
+      startTimeLocal: (json['startTimeLocal'] as String?)?.toString(),
+    );
+  }
+}
+
+class NarrationSummaryRequest {
+  NarrationSummaryRequest({
+    required this.tripId,
+    required this.stopTitle,
+    this.stopSubtitle,
+  });
+
+  final String tripId;
+  final String stopTitle;
+  final String? stopSubtitle;
+
+  Map<String, dynamic> toJson() => {
+        'tripId': tripId,
+        'stopTitle': stopTitle,
+        if (stopSubtitle != null) 'stopSubtitle': stopSubtitle,
+      };
+}
+
+class NarrationSummaryResponse {
+  NarrationSummaryResponse({required this.text});
+  final String text;
+
+  factory NarrationSummaryResponse.fromJson(Map<String, dynamic> json) {
+    return NarrationSummaryResponse(text: (json['text'] ?? '').toString());
   }
 }

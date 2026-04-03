@@ -15,7 +15,16 @@ class ExploreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => ExploreProvider(context.read<NaviaApi>()),
+      create: (context) {
+        final p = ExploreProvider(context.read<NaviaApi>());
+        final trip = context.read<TripProvider>();
+        final lat = trip.startLat;
+        final lng = trip.startLng;
+        if (lat != null && lng != null) {
+          p.setUserLocation(GeoPoint(lat: lat, lng: lng));
+        }
+        return p;
+      },
       child: const _ExploreScreenUI(),
     );
   }

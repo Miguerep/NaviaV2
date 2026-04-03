@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 class TripProvider extends ChangeNotifier {
+  String? _tripId;
   String? _destination;
   DateTimeRange? _tripDates;
 
@@ -9,6 +11,11 @@ class TripProvider extends ChangeNotifier {
   final Set<String> _interests = {};
   String _pace = 'Relaxed';
 
+  double? _startLat;
+  double? _startLng;
+  String? _acceptLanguage;
+
+  String? get tripId => _tripId;
   String? get destination => _destination;
   DateTimeRange? get tripDates => _tripDates;
 
@@ -16,7 +23,11 @@ class TripProvider extends ChangeNotifier {
   Set<String> get interests => Set.unmodifiable(_interests);
   String get pace => _pace;
 
-  bool get hasTrip => _destination != null && _tripDates != null;
+  double? get startLat => _startLat;
+  double? get startLng => _startLng;
+  String? get acceptLanguage => _acceptLanguage;
+
+  bool get hasTrip => _tripId != null;
 
   // --- Step-one setters ---
 
@@ -39,6 +50,46 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setTripId(String? tripId) {
+    _tripId = (tripId == null || tripId.trim().isEmpty) ? null : tripId.trim();
+    notifyListeners();
+  }
+
+  void setStartLocation({double? lat, double? lng}) {
+    _startLat = lat;
+    _startLng = lng;
+    notifyListeners();
+  }
+
+  void setAcceptLanguage(String? languageTag) {
+    final v = languageTag?.trim();
+    _acceptLanguage = (v == null || v.isEmpty) ? null : v;
+    notifyListeners();
+  }
+
+  Future<void> initLocation() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) return;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setStartLocation(lat: pos.latitude, lng: pos.longitude);
+    } catch (_) {
+      // Best-effort: location is optional for MVP flows.
+    }
+  }
+
   // --- Existing setters ---
 
   void setDestination(String dest) {
@@ -52,11 +103,14 @@ class TripProvider extends ChangeNotifier {
   }
 
   void reset() {
+    _tripId = null;
     _destination = null;
     _tripDates = null;
     _tripDuration = 5;
     _interests.clear();
     _pace = 'Relaxed';
+    _startLat = null;
+    _startLng = null;
     notifyListeners();
   }
 }

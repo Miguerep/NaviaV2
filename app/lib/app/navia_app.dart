@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../app/app_settings.dart';
+import '../api/navia_api.dart';
 import '../providers/trip_provider.dart';
 import '../screens/explore/explore_screen.dart';
 import '../screens/guide/guide_screen.dart';
@@ -27,6 +29,17 @@ class _NaviaAppState extends State<NaviaApp> {
   void initState() {
     super.initState();
     _router = _buildRouter();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final locale = WidgetsBinding.instance.platformDispatcher.locale;
+      final languageTag = locale.toLanguageTag();
+      final trip = context.read<TripProvider>();
+      trip.setAcceptLanguage(languageTag);
+      // Fire-and-forget: request permission + capture coords.
+      trip.initLocation();
+      // Touch NaviaApi so it's available in the tree.
+      context.read<NaviaApi>();
+    });
   }
 
   GoRouter _buildRouter() {
@@ -113,6 +126,15 @@ class _NaviaAppState extends State<NaviaApp> {
       child: MaterialApp.router(
         title: 'Navia',
         theme: NaviaTheme.light(highContrast: settings.highContrast),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('es'),
+        ],
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
         builder: (context, child) {

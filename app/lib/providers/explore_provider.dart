@@ -5,6 +5,7 @@ class ExploreProvider extends ChangeNotifier {
   ExploreProvider(this.api);
   
   final NaviaApi api;
+  GeoPoint? _userLocation;
 
   bool _loading = false;
   String? _error;
@@ -13,6 +14,10 @@ class ExploreProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   List<PlaceResult> get results => _results;
+
+  void setUserLocation(GeoPoint? location) {
+    _userLocation = location;
+  }
 
   void clearError() {
     if (_error != null) {
@@ -30,7 +35,10 @@ class ExploreProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _results = await api.searchPlaces(query: q);
+      final near = _userLocation == null
+          ? null
+          : '${_userLocation!.lat},${_userLocation!.lng}';
+      _results = await api.searchPlaces(query: q, nearLatLng: near);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -41,8 +49,7 @@ class ExploreProvider extends ChangeNotifier {
 
   Future<RouteResult?> getRouteToPlace(PlaceResult p) async {
     if (p.center == null) return null;
-    // Mock user's current location to Paris for map matching
-    final from = GeoPoint(lat: 48.8566, lng: 2.3522); 
+    final from = _userLocation ?? GeoPoint(lat: 48.8566, lng: 2.3522);
     try {
       return await api.getRouteWalking(from: from, to: p.center!);
     } catch (e) {

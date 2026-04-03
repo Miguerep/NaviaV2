@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import create_db_and_tables
-from app.routers import chat, itinerary, places, trips
+from app.routers import chat, itinerary, narration, places, trips
 
 
 @asynccontextmanager
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(trips.router)
 app.include_router(itinerary.router)
 app.include_router(chat.router)
+app.include_router(narration.router)
 app.include_router(places.router)
 
 

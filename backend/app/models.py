@@ -15,6 +15,11 @@ class Trip(SQLModel, table=True):
     destination: str
     start_date: date
     end_date: date
+    trip_duration: int | None = None
+    interests_csv: str | None = None
+    pace: str | None = None
+    start_lat: float | None = None
+    start_lng: float | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

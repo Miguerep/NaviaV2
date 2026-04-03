@@ -7,12 +7,27 @@ class CreateTripRequest(BaseModel):
     destination: str
     startDate: date
     endDate: date
+    tripDuration: int | None = None
+    interests: list[str] = []
+    pace: str | None = None
+    startLat: float | None = None
+    startLng: float | None = None
 
     @model_validator(mode="after")
     def check_date_order(self) -> "CreateTripRequest":
         if self.startDate > self.endDate:
             raise ValueError("startDate must be on or before endDate")
         return self
+
+
+class NarrationSummaryRequest(BaseModel):
+    tripId: str
+    stopTitle: str
+    stopSubtitle: str | None = None
+
+
+class NarrationSummaryResponse(BaseModel):
+    text: str
 
 
 class RegeneratePlanRequest(BaseModel):
