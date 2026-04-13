@@ -10,8 +10,4 @@ class AppEnv {
     }
     return 'http://127.0.0.1:8787';
   }
-
-  static const String mapboxPublicToken = String.fromEnvironment(
-    'MAPBOX_PUBLIC_TOKEN',
-  );
 }

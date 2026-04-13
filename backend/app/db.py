@@ -13,12 +13,24 @@ engine = create_engine(settings.database_url, echo=False)
 
 def init_database() -> None:
     """Create tables and migrate any missing columns (safe, non-destructive)."""
+    # Ensure all models are registered in SQLModel.metadata before create_all
+    import app.models  # noqa: F401  (side-effect import)
+
     # 1. Create tables that don't exist yet
     SQLModel.metadata.create_all(engine)
 
-    # 2. For SQLite only: add any columns the ORM model has that the DB lacks
-    db_path = settings.database_url.removeprefix("sqlite:///")
-    if not db_path or not Path(db_path).exists():
+    # 2. For SQLite only: add any columns the ORM model has that the DB lacks.
+    #    Resolve the DB path to an absolute path so it works regardless of CWD.
+    raw_url = settings.database_url  # e.g. "sqlite:///./backend.db" or "sqlite:///backend.db"
+    if not raw_url.startswith("sqlite:///"):
+        return  # Not SQLite – skip
+
+    rel = raw_url.removeprefix("sqlite:///").lstrip("./")
+    # Anchor to the directory that contains this file (app/) → go one level up → project root
+    project_root = Path(__file__).resolve().parent.parent
+    db_path = project_root / rel
+
+    if not db_path.exists():
         return
 
     conn = sqlite3.connect(db_path)

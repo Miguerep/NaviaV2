@@ -112,7 +112,7 @@ def replace_stops(session: Session, trip_id: str, plan_day: date, stops_data: li
         for idx, s in enumerate(stops_data)
     ]
     session.add_all(new_stops)
-    session.commit()
+    # NOTE: caller is responsible for committing
 
 
 def _clear_stops(session: Session, day_plan_id: str) -> None:

@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     app_port: int = 8787
 
     database_url: str = "sqlite:///./backend.db"
-    mapbox_token: str | None = None
     gemini_api_key: str = ""
     allowed_origins: list[str] = [
         "http://localhost:3000",

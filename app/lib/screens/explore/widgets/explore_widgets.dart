@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../api/navia_api.dart';
-import '../../../config/app_env.dart';
 import '../../../theme/navia_theme.dart';
 
 class PlaceListTile extends StatelessWidget {
@@ -63,8 +62,6 @@ class ExploreMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canShowMap = AppEnv.mapboxPublicToken.trim().isNotEmpty;
-
     final markers = places
         .where((r) => r.center != null)
         .map((r) => Marker(
@@ -88,21 +85,6 @@ class ExploreMap extends StatelessWidget {
             ))
         .toList(growable: false);
 
-    if (!canShowMap) {
-      return Container(
-        color: NaviaThemeTokens.surfaceContainerHighest,
-        child: Center(
-          child: Text(
-            'To show the map, run the app with:\n--dart-define=MAPBOX_PUBLIC_TOKEN=YOUR_TOKEN',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: NaviaThemeTokens.onSurfaceVariant,
-                ),
-          ),
-        ),
-      );
-    }
-
     return FlutterMap(
       mapController: mapController,
       options: const MapOptions(
@@ -111,8 +93,7 @@ class ExploreMap extends StatelessWidget {
       ),
       children: [
         TileLayer(
-          urlTemplate:
-              'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}@2x?access_token=${AppEnv.mapboxPublicToken}',
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.navia.navia_app',
         ),
         MarkerLayer(markers: markers),

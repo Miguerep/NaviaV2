@@ -3,7 +3,8 @@ import logging
 import uuid
 from datetime import date
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from sqlmodel import Session, select
 
 from app.config import settings
@@ -16,12 +17,11 @@ logger = logging.getLogger(__name__)
 # Gemini client (initialised lazily so missing key just disables AI)
 # ---------------------------------------------------------------------------
 
-def _get_model():
+def _get_client() -> genai.Client | None:
     key = settings.gemini_api_key
     if not key:
         return None
-    genai.configure(api_key=key)
-    return genai.GenerativeModel("gemini-2.0-flash")
+    return genai.Client(api_key=key)
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +39,12 @@ def _get_current_stops(session: Session, trip_id: str, plan_day: date) -> list[d
         select(Stop).where(Stop.day_plan_id == plan.id).order_by(Stop.ordinal)
     ).all()
     return [
-        {"ordinal": s.ordinal, "title": s.title, "subtitle": s.subtitle, "startTimeLocal": s.start_time_local}
+        {
+            "ordinal": s.ordinal,
+            "title": s.title,
+            "subtitle": s.subtitle,
+            "startTimeLocal": s.start_time_local,
+        }
         for s in stops
     ]
 
@@ -75,13 +80,11 @@ def run_ai_chat(
     """
     Call Gemini with the user message + current stops as context.
     Returns (assistant_reply, actions_list).
-    actions_list is a ReplaceDayPlan action if Gemini decided to rewrite.
     """
-    model = _get_model()
+    client = _get_client()
     current_stops = _get_current_stops(session, trip_id, plan_day)
 
-    if model is None:
-        # No API key – graceful fallback
+    if client is None:
         logger.warning("GEMINI_API_KEY not set; returning static fallback reply.")
         return "I can help adjust your itinerary! Please add a Gemini API key to enable AI features.", []
 
@@ -92,9 +95,10 @@ def run_ai_chat(
     )
 
     try:
-        response = model.generate_content(
-            [_SYSTEM_PROMPT, context],
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-flash-lite-latest",
+            contents=[_SYSTEM_PROMPT, context],
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.7,
             ),
@@ -128,23 +132,36 @@ def handle_chat(
     plan_day: date,
     user_message: str,
 ) -> tuple[str, list[dict]]:
-    """Full chat pipeline: AI → apply actions → persist messages → return."""
+    """Full chat pipeline: AI → apply actions → persist messages → single commit."""
     assistant_text, actions = run_ai_chat(session, trip_id, plan_day, user_message)
 
-    # Apply itinerary changes if any
+    # Apply itinerary changes (no auto-commit inside replace_stops)
     replace_action = next((a for a in actions if a.get("type") == "ReplaceDayPlan"), None)
     if replace_action:
         replace_stops(session, trip_id, plan_day, replace_action.get("stops", []))
 
-    # Persist both messages
-    save_message(session, trip_id, ChatRole.user, user_message)
-    save_message(session, trip_id, ChatRole.assistant, assistant_text)
+    # Stage both chat messages
+    for role, content in [
+        (ChatRole.user, user_message),
+        (ChatRole.assistant, assistant_text),
+    ]:
+        session.add(
+            ChatMessage(
+                id=uuid.uuid4().hex,
+                trip_id=trip_id,
+                role=role,
+                content=content,
+            )
+        )
+
+    # Single commit for everything in this request
+    session.commit()
 
     return assistant_text, actions
 
 
 def save_message(session: Session, trip_id: str, role: ChatRole, content: str) -> None:
-    """Persist a chat message."""
+    """Persist a chat message (standalone helper, commits immediately)."""
     session.add(
         ChatMessage(
             id=uuid.uuid4().hex,
@@ -154,3 +171,4 @@ def save_message(session: Session, trip_id: str, role: ChatRole, content: str) -
         )
     )
     session.commit()
+
