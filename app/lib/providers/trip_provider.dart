@@ -82,7 +82,7 @@ class TripProvider extends ChangeNotifier {
       }
 
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       setStartLocation(lat: pos.latitude, lng: pos.longitude);
     } catch (_) {

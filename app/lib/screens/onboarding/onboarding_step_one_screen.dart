@@ -121,27 +121,7 @@ class OnboardingStepOneScreen extends StatelessWidget {
                   ),
                 ),
 
-                // ── Journey counter ──────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'How long is your journey?',
-                          style: GoogleFonts.lexend(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: NaviaThemeTokens.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const _JourneyCounter(),
-                      ],
-                    ),
-                  ),
-                ),
+
 
                 // ── Wanderlust grid ──────────────────────
                 SliverPadding(
@@ -275,105 +255,7 @@ class _OnboardingHeader extends StatelessWidget {
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// JOURNEY COUNTER – stepper
-// ──────────────────────────────────────────────────────────────
 
-class _JourneyCounter extends StatelessWidget {
-  const _JourneyCounter();
-
-  @override
-  Widget build(BuildContext context) {
-    final trip = context.watch<TripProvider>();
-
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: NaviaThemeTokens.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: NaviaThemeTokens.primary,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: NaviaThemeTokens.primary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Minus button
-          _StepperButton(
-            icon: Icons.remove,
-            onTap: () => trip.setTripDuration(trip.tripDuration - 1),
-          ),
-
-          // Value
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${trip.tripDuration}',
-                  style: GoogleFonts.lexend(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: NaviaThemeTokens.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Day(s)',
-                  style: GoogleFonts.lexend(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: NaviaThemeTokens.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Plus button
-          _StepperButton(
-            icon: Icons.add,
-            onTap: () => trip.setTripDuration(trip.tripDuration + 1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: NaviaThemeTokens.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 56,
-          height: 56,
-          child: Icon(
-            icon,
-            color: NaviaThemeTokens.primary,
-            size: 24,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ──────────────────────────────────────────────────────────────
 // WANDERLUST GRID – 2×2 interest cards

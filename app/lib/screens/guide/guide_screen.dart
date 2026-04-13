@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 import '../../app/app_settings.dart';
-import '../../config/app_env.dart';
+import '../../providers/chat_provider.dart';
 import '../../providers/itinerary_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../services/speech_service.dart';
@@ -24,11 +22,19 @@ class _GuideScreenState extends State<GuideScreen> {
   final _scrollController = ScrollController();
   late SpeechService _speech;
   bool _isListening = false;
-  bool _sending = false;
+  bool _isInit = false;
 
-  final List<_ChatMsg> _msgs = [
-    _ChatMsg.assistant('Hi! Tell me what you’d like to change today.'),
-  ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      _isInit = true;
+      final chat = context.read<ChatProvider>();
+      if (chat.messages.isEmpty) {
+        chat.addSystemMessage('Hi! Tell me what you’d like to change today.');
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -48,7 +54,7 @@ class _GuideScreenState extends State<GuideScreen> {
     super.dispose();
   }
 
-  void _send() {
+  void _send() async {
     final settings = AppSettingsScope.of(context);
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -57,157 +63,46 @@ class _GuideScreenState extends State<GuideScreen> {
     final tripId = trip.tripId;
     final itinerary = context.read<ItineraryProvider>();
     final activeDate = itinerary.activeDay;
+    final chat = context.read<ChatProvider>();
+    
     if (tripId == null) return;
 
-    setState(() {
-      _sending = true;
-      _msgs.add(_ChatMsg.user(text));
-      _msgs.add(_ChatMsg.assistant('...'));
-    });
     _controller.clear();
-    _streamChat(
+    FocusScope.of(context).unfocus();
+    
+    _scrollToBottom();
+    
+    await chat.sendMessage(
       tripId: tripId,
-      userMessage: text,
       activeDate: activeDate,
+      text: text,
       acceptLanguage: trip.acceptLanguage,
-      voiceSpeed: settings.voiceSpeed,
+      onItineraryModified: () async {
+        await itinerary.loadDay(
+          tripId: tripId,
+          day: activeDate,
+          acceptLanguage: trip.acceptLanguage,
+        );
+      },
+      onAssistantMessageComplete: (finalText) {
+        if (finalText.isNotEmpty) {
+          _speech.speak(finalText, speed: settings.voiceSpeed);
+        }
+      },
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent + 240,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    });
+    _scrollToBottom();
   }
 
-  Future<void> _streamChat({
-    required String tripId,
-    required String userMessage,
-    required DateTime activeDate,
-    required String? acceptLanguage,
-    required double voiceSpeed,
-  }) async {
-    http.Client? client;
-    try {
-      client = http.Client();
-      final yyyy = activeDate.year.toString().padLeft(4, '0');
-      final mm = activeDate.month.toString().padLeft(2, '0');
-      final dd = activeDate.day.toString().padLeft(2, '0');
-      final dateIso = '$yyyy-$mm-$dd';
-
-      final uri = Uri.parse('${AppEnv.apiUrl}/v1/chat');
-      final req = http.Request('POST', uri);
-      req.headers['Content-Type'] = 'application/json; charset=utf-8';
-      if (acceptLanguage != null && acceptLanguage.trim().isNotEmpty) {
-        req.headers['Accept-Language'] = acceptLanguage.trim();
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent + 240,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
       }
-      req.body = jsonEncode({
-        'tripId': tripId,
-        'activeDate': dateIso,
-        'userMessage': userMessage,
-      });
-
-      final res = await client.send(req).timeout(const Duration(seconds: 30));
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw Exception('Chat failed: ${res.statusCode}');
-      }
-
-      final stream = res.stream.transform(utf8.decoder);
-      final buffer = StringBuffer();
-      String? currentEvent;
-
-      void applyAssistantText(String text) {
-        if (!mounted) return;
-        setState(() {
-          final idx = _msgs.lastIndexWhere((m) => !m.isUser);
-          if (idx >= 0) {
-            _msgs[idx] = _ChatMsg.assistant(text);
-          }
-        });
-      }
-
-      Future<void> handleEvent(String event, String data) async {
-        if (event == 'message.delta' || event == 'message.final') {
-          final obj = jsonDecode(data);
-          if (obj is Map && obj['text'] is String) {
-            applyAssistantText(obj['text'] as String);
-          }
-          if (event == 'message.final') {
-            final obj2 = jsonDecode(data);
-            final finalText = (obj2 is Map && obj2['text'] is String)
-                ? (obj2['text'] as String)
-                : null;
-            if (finalText != null && finalText.trim().isNotEmpty) {
-              await _speech.speak(finalText, speed: voiceSpeed);
-            }
-          }
-          return;
-        }
-
-        if (event == 'actions') {
-          final obj = jsonDecode(data);
-          final actions = (obj is Map) ? obj['actions'] : null;
-          final hasReplace = (actions is List)
-              ? actions.any((a) =>
-                  a is Map && (a['type']?.toString() == 'ReplaceDayPlan'))
-              : false;
-          if (hasReplace) {
-            final itinerary = context.read<ItineraryProvider>();
-            final trip = context.read<TripProvider>();
-            final tripId = trip.tripId;
-            if (tripId != null) {
-              await itinerary.loadDay(
-                tripId: tripId,
-                day: itinerary.activeDay,
-                acceptLanguage: trip.acceptLanguage,
-              );
-            }
-          }
-          return;
-        }
-      }
-
-      await for (final chunk in stream) {
-        buffer.write(chunk);
-        final text = buffer.toString();
-        final parts = text.split('\n\n');
-        if (parts.length == 1) continue;
-        buffer
-          ..clear()
-          ..write(parts.removeLast());
-
-        for (final rawEvent in parts) {
-          final lines = rawEvent.split('\n');
-          currentEvent = null;
-          final dataLines = <String>[];
-          for (final line in lines) {
-            if (line.startsWith('event:')) {
-              currentEvent = line.substring(6).trim();
-            } else if (line.startsWith('data:')) {
-              dataLines.add(line.substring(5).trim());
-            }
-          }
-          final ev = currentEvent;
-          if (ev == null) continue;
-          final data = dataLines.join('\n');
-          if (data.isEmpty) continue;
-          await handleEvent(ev, data);
-        }
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        final idx = _msgs.lastIndexWhere((m) => !m.isUser);
-        if (idx >= 0) {
-          _msgs[idx] = _ChatMsg.assistant('Sorry — I could not reach the guide service.');
-        }
-      });
-    } finally {
-      client?.close();
-      if (mounted) setState(() => _sending = false);
-    }
+    });
   }
 
   Future<void> _toggleListen() async {
@@ -228,6 +123,10 @@ class _GuideScreenState extends State<GuideScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chat = context.watch<ChatProvider>();
+    final sending = chat.loading;
+    final msgs = chat.messages;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Guide'),
@@ -240,11 +139,20 @@ class _GuideScreenState extends State<GuideScreen> {
       ),
       body: Column(
         children: [
+          if (chat.error != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: NaviaThemeTokens.error.withValues(alpha: 0.1),
+              child: Text(
+                'Error: ${chat.error}',
+                style: TextStyle(color: NaviaThemeTokens.error),
+              ),
+            ),
           Expanded(
             child: ListView.separated(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              itemCount: _msgs.length + 1,
+              itemCount: msgs.length + 1,
               separatorBuilder: (context, index) =>
                   const SizedBox(height: 14),
               itemBuilder: (context, idx) {
@@ -265,7 +173,7 @@ class _GuideScreenState extends State<GuideScreen> {
                     ),
                   );
                 }
-                final msg = _msgs[idx - 1];
+                final msg = msgs[idx - 1];
                 return Align(
                   alignment:
                       msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -294,7 +202,7 @@ class _GuideScreenState extends State<GuideScreen> {
                               ],
                       ),
                       child: Text(
-                        msg.text,
+                        msg.text.isEmpty && !msg.isUser ? '...' : msg.text,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               color: msg.isUser ? Colors.white : NaviaThemeTokens.onSurface,
                               height: 1.25,
@@ -323,7 +231,7 @@ class _GuideScreenState extends State<GuideScreen> {
                     child: TextField(
                       controller: _controller,
                       onSubmitted: (_) => _send(),
-                      enabled: !_sending,
+                      enabled: !sending,
                       decoration: const InputDecoration(
                         hintText: 'Type your request...',
                       ),
@@ -331,7 +239,7 @@ class _GuideScreenState extends State<GuideScreen> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _sending ? null : _toggleListen,
+                    onPressed: sending ? null : _toggleListen,
                     icon: Icon(_isListening ? Icons.stop : Icons.mic),
                     style: IconButton.styleFrom(
                       backgroundColor: NaviaThemeTokens.primary,
@@ -341,11 +249,11 @@ class _GuideScreenState extends State<GuideScreen> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _sending ? null : _send,
-                    icon: const Icon(Icons.send),
+                    onPressed: sending ? chat.cancel : _send,
+                    icon: Icon(sending ? Icons.stop : Icons.send),
                     style: IconButton.styleFrom(
-                      backgroundColor: NaviaThemeTokens.primaryDim,
-                      foregroundColor: Colors.white,
+                      backgroundColor: sending ? NaviaThemeTokens.surfaceContainerHighest : NaviaThemeTokens.primaryDim,
+                      foregroundColor: sending ? NaviaThemeTokens.onSurface : Colors.white,
                       fixedSize: const Size(56, 56),
                     ),
                   ),
@@ -359,11 +267,3 @@ class _GuideScreenState extends State<GuideScreen> {
   }
 }
 
-class _ChatMsg {
-  _ChatMsg(this.isUser, this.text);
-  final bool isUser;
-  final String text;
-
-  static _ChatMsg user(String text) => _ChatMsg(true, text);
-  static _ChatMsg assistant(String text) => _ChatMsg(false, text);
-}
