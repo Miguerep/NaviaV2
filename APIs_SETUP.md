@@ -36,6 +36,19 @@ Archivos:
 - `backend/app/features/api/osrm_service.py`
 - `backend/app/features/api/wikipedia_service.py`
 
+## Backend — endpoint de ruta sin Mapbox (OSRM)
+
+Para no modificar el endpoint existente `/v1/route` (Mapbox), se añadió un endpoint **nuevo**:
+
+- `GET /v1/osm/route?from=lat,lng&to=lat,lng`
+
+Se expone desde un entrypoint alternativo:
+
+- `backend/app/main_osm.py`
+
+Arranque:
+- `uv run uvicorn app.main_osm:app --reload --host 0.0.0.0 --port 8787`
+
 ## App Flutter — configuración (sin `.env`)
 
 Flutter usa `--dart-define` (ver `app/lib/config/app_env.dart`).
