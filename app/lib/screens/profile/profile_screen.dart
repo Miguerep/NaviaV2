@@ -15,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   double _sliderTextSize = 2;
   double _sliderVoice = 2;
+  String _lang = 'en';
 
   @override
   void initState() {
@@ -22,6 +23,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = context.read<AppSettings>();
       setState(() {
+        final current = settings.locale?.languageCode ??
+            WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+        _lang = (current == 'es') ? 'es' : 'en';
         _sliderTextSize = settings.textScale <= 1.01
             ? 1
             : settings.textScale <= 1.2
@@ -152,6 +156,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: settings.highContrast,
                         onChanged: (v) {
                           settings.setHighContrast(v);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: NaviaThemeTokens.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.language, color: NaviaThemeTokens.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Language', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Choose the app language',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: NaviaThemeTokens.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: _lang,
+                        underline: const SizedBox.shrink(),
+                        items: const [
+                          DropdownMenuItem(value: 'en', child: Text('English')),
+                          DropdownMenuItem(value: 'es', child: Text('Español')),
+                        ],
+                        onChanged: (v) async {
+                          final next = v ?? 'en';
+                          setState(() => _lang = next);
+                          await settings.setLocale(Locale(next));
+                          context.read<TripProvider>().setAcceptLanguage(next);
                         },
                       ),
                     ],

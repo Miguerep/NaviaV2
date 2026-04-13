@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
 import '../../api/navia_api.dart';
+import '../../components/external/osm_map_view.dart';
 import '../../providers/itinerary_provider.dart';
 import '../../providers/trip_provider.dart';
+import '../explore/explore_screen.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
 
@@ -55,6 +58,12 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
     final speech = context.read<SpeechService>();
     final api = context.read<NaviaApi>();
 
+    final lat = trip.startLat;
+    final lng = trip.startLng;
+    final mapCenter = (lat != null && lng != null)
+        ? LatLng(lat, lng)
+        : const LatLng(48.8566, 2.3522); // Safe fallback (Paris)
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daily Itinerary'),
@@ -74,13 +83,59 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
               color: NaviaThemeTokens.surfaceContainerLow,
               borderRadius: BorderRadius.circular(24),
             ),
-            child: Center(
-              child: Text(
-                'Map overview (tap to open Explore)\nDestination: ${trip.destination ?? '-'}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: NaviaThemeTokens.onSurfaceVariant,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: OsmMapView(
+                      center: mapCenter,
+                      zoom: 13,
+                      interactiveFlags: 0, // preview-only
                     ),
+                  ),
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ExploreScreen(),
+                            ),
+                          );
+                        },
+                        child: Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: NaviaThemeTokens.surfaceContainerLowest
+                                    .withValues(alpha: 0.88),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                'Map overview · Tap to Explore\nDestination: ${trip.destination ?? '-'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: NaviaThemeTokens.onSurfaceVariant,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

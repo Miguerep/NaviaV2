@@ -56,9 +56,53 @@ class NaviaTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: NaviaThemeTokens.surfaceContainerHighest,
+        labelStyle: const TextStyle(
+          color: NaviaThemeTokens.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: NaviaThemeTokens.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        helperStyle: TextStyle(
+          color: NaviaThemeTokens.onSurfaceVariant.withValues(alpha: 0.75),
+          fontWeight: FontWeight.w500,
+        ),
+        errorStyle: const TextStyle(
+          color: NaviaThemeTokens.error,
+          fontWeight: FontWeight.w600,
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: NaviaThemeTokens.outlineVariant,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: NaviaThemeTokens.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: NaviaThemeTokens.error,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: NaviaThemeTokens.error,
+            width: 2,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         hintStyle: TextStyle(

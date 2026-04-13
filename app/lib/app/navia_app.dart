@@ -35,10 +35,16 @@ class _NaviaAppState extends State<NaviaApp> {
       final languageTag = locale.toLanguageTag();
       final trip = context.read<TripProvider>();
       trip.setAcceptLanguage(languageTag);
+      trip.restoreTripIdFromStorage();
       // Fire-and-forget: request permission + capture coords.
       trip.initLocation();
       // Touch NaviaApi so it's available in the tree.
       context.read<NaviaApi>();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AppSettings>().restoreLocaleFromStorage();
     });
   }
 
@@ -126,6 +132,7 @@ class _NaviaAppState extends State<NaviaApp> {
       child: MaterialApp.router(
         title: 'Navia',
         theme: NaviaTheme.light(highContrast: settings.highContrast),
+        locale: settings.locale,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

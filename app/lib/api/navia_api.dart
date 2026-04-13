@@ -58,7 +58,7 @@ class NaviaApi {
     required GeoPoint to,
     String? acceptLanguage,
   }) async {
-    final uri = Uri.parse('$baseUrl/v1/route').replace(
+    final uri = Uri.parse('$baseUrl/v1/osm/route').replace(
       queryParameters: {
         'from': '${from.lat},${from.lng}',
         'to': '${to.lat},${to.lng}',

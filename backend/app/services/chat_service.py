@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 
 from app.config import settings
 from app.models import ChatMessage, ChatRole, DayPlan, Stop
+from app.services.trip_service import get_trip_or_404
 from app.services.itinerary_service import replace_stops
 
 logger = logging.getLogger(__name__)
@@ -83,13 +84,33 @@ def run_ai_chat(
     """
     client = _get_client()
     current_stops = _get_current_stops(session, trip_id, plan_day)
+    trip = get_trip_or_404(session, trip_id)
+
+    interests = (
+        [i.strip() for i in (trip.interests_csv or "").split(",") if i.strip()]
+        if getattr(trip, "interests_csv", None)
+        else []
+    )
+    pace = (trip.pace or "").strip() if getattr(trip, "pace", None) else ""
+    destination = (trip.destination or "").strip()
+    dates = f"{trip.start_date.isoformat()} to {trip.end_date.isoformat()}"
+    trip_context = {
+        "destination": destination,
+        "dates": dates,
+        "pace": pace or None,
+        "interests": interests,
+        "startLat": trip.start_lat,
+        "startLng": trip.start_lng,
+    }
 
     if client is None:
         logger.warning("GEMINI_API_KEY not set; returning static fallback reply.")
         return "I can help adjust your itinerary! Please add a Gemini API key to enable AI features.", []
 
     context = (
-        f"Current itinerary for {plan_day.isoformat()}:\n"
+        "Trip context (must be respected):\n"
+        + json.dumps(trip_context, ensure_ascii=False, indent=2)
+        + f"\n\nCurrent itinerary for {plan_day.isoformat()}:\n"
         + json.dumps(current_stops, ensure_ascii=False, indent=2)
         + f"\n\nUser message: {user_message}"
     )

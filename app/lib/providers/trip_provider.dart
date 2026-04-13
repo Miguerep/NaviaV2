@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TripProvider extends ChangeNotifier {
+  static const _kTripIdKey = 'navia_trip_id';
+
   String? _tripId;
   String? _destination;
   DateTimeRange? _tripDates;
@@ -29,6 +32,19 @@ class TripProvider extends ChangeNotifier {
 
   bool get hasTrip => _tripId != null;
 
+  Future<void> restoreTripIdFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final v = prefs.getString(_kTripIdKey);
+      if (v == null || v.trim().isEmpty) return;
+      if (_tripId == v.trim()) return;
+      _tripId = v.trim();
+      notifyListeners();
+    } catch (_) {
+      // Best-effort: persistence should not block startup.
+    }
+  }
+
   // --- Step-one setters ---
 
   void setTripDuration(int days) {
@@ -52,7 +68,19 @@ class TripProvider extends ChangeNotifier {
 
   void setTripId(String? tripId) {
     _tripId = (tripId == null || tripId.trim().isEmpty) ? null : tripId.trim();
+    _persistTripId();
     notifyListeners();
+  }
+
+  Future<void> _persistTripId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_tripId == null) {
+        await prefs.remove(_kTripIdKey);
+      } else {
+        await prefs.setString(_kTripIdKey, _tripId!);
+      }
+    } catch (_) {}
   }
 
   void setStartLocation({double? lat, double? lng}) {
@@ -111,6 +139,7 @@ class TripProvider extends ChangeNotifier {
     _pace = 'Relaxed';
     _startLat = null;
     _startLng = null;
+    _persistTripId();
     notifyListeners();
   }
 }
