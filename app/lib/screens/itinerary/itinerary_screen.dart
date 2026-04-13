@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
 import '../../api/navia_api.dart';
+import '../../providers/itinerary_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';

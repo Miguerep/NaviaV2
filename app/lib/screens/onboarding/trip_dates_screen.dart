@@ -152,10 +152,10 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
                           acceptLanguage: trip.acceptLanguage,
                         );
                         trip.setTripId(created.id);
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         context.go('/app/explore');
                       } catch (_) {
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Could not create trip. Please try again.')),
                         );

@@ -166,6 +166,76 @@ class NaviaApi {
     }
     return NarrationSummaryResponse.fromJson(json);
   }
+
+  Future<void> regenerateDayPlan({
+    required String tripId,
+    required DateTime date,
+    String? acceptLanguage,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/itinerary/$tripId/regenerate');
+    final yyyy = date.year.toString().padLeft(4, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    final dd = date.day.toString().padLeft(2, '0');
+    
+    final res = await http.post(
+      uri,
+      headers: _headers(acceptLanguage: acceptLanguage),
+      body: jsonEncode({'date': '$yyyy-$mm-$dd'}),
+    ).timeout(const Duration(seconds: 30));
+    
+    final body = utf8.decode(res.bodyBytes);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiError(res.statusCode, body);
+    }
+  }
+
+  Stream<ChatEvent> sendChatMessage({
+    required String tripId,
+    required String userMessage,
+    required DateTime activeDate,
+    String? acceptLanguage,
+  }) async* {
+    final uri = Uri.parse('$baseUrl/v1/chat');
+    final req = http.Request('POST', uri);
+    req.headers.addAll(_headers(acceptLanguage: acceptLanguage));
+    
+    final yyyy = activeDate.year.toString().padLeft(4, '0');
+    final mm = activeDate.month.toString().padLeft(2, '0');
+    final dd = activeDate.day.toString().padLeft(2, '0');
+    
+    req.body = jsonEncode({
+      'tripId': tripId,
+      'userMessage': userMessage,
+      'activeDate': '$yyyy-$mm-$dd',
+    });
+
+    final client = http.Client();
+    try {
+      final res = await client.send(req);
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        final bodyBytes = await res.stream.toBytes();
+        throw ApiError(res.statusCode, utf8.decode(bodyBytes));
+      }
+
+      String currentEvent = '';
+      await for (final line in res.stream.transform(utf8.decoder).transform(const LineSplitter())) {
+        if (line.isEmpty) continue;
+        if (line.startsWith('event: ')) {
+          currentEvent = line.substring(7).trim();
+        } else if (line.startsWith('data: ')) {
+          final dataStr = line.substring(6).trim();
+          final dataJson = jsonDecode(dataStr);
+          if (currentEvent == 'message.delta' || currentEvent == 'message.final') {
+            yield ChatEventText(dataJson['text'] as String, isFinal: currentEvent == 'message.final');
+          } else if (currentEvent == 'actions') {
+            yield ChatEventActions(dataJson['actions'] as List<dynamic>);
+          }
+        }
+      }
+    } finally {
+      client.close();
+    }
+  }
 }
 
 class ApiError implements Exception {
@@ -410,4 +480,17 @@ class NarrationSummaryResponse {
   factory NarrationSummaryResponse.fromJson(Map<String, dynamic> json) {
     return NarrationSummaryResponse(text: (json['text'] ?? '').toString());
   }
+}
+
+sealed class ChatEvent {}
+
+class ChatEventText extends ChatEvent {
+  ChatEventText(this.text, {this.isFinal = false});
+  final String text;
+  final bool isFinal;
+}
+
+class ChatEventActions extends ChatEvent {
+  ChatEventActions(this.actions);
+  final List<dynamic> actions;
 }
