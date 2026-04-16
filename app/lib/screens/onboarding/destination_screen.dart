@@ -72,11 +72,11 @@ class _DestinationScreenState extends State<DestinationScreen> {
         _results = const [];
       });
     } finally {
-      if (!mounted) return;
-      if (seq != _querySeq) return;
-      setState(() {
-        _loading = false;
-      });
+      if (mounted && seq == _querySeq) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -158,7 +158,7 @@ class _DestinationScreenState extends State<DestinationScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _results.length.clamp(0, 6),
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, idx) {
                     final p = _results[idx];
                     final title = (p.name.isEmpty ? p.placeName : p.name).trim();

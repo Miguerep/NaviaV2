@@ -53,9 +53,17 @@ class NaviaTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: NaviaThemeTokens.primary,
+        selectionColor: NaviaThemeTokens.primary.withValues(alpha: 0.3),
+        selectionHandleColor: NaviaThemeTokens.primary,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: NaviaThemeTokens.surfaceContainerHighest,
+        // Explicit input text color to guarantee contrast on the fill
+        suffixStyle: TextStyle(color: onSurface),
+        prefixStyle: TextStyle(color: onSurface),
         labelStyle: const TextStyle(
           color: NaviaThemeTokens.onSurfaceVariant,
           fontWeight: FontWeight.w600,
@@ -113,11 +121,11 @@ class NaviaTheme {
     );
 
     final textTheme = GoogleFonts.lexendTextTheme(base.textTheme).copyWith(
-      titleLarge: GoogleFonts.lexend(fontWeight: FontWeight.w800),
-      titleMedium: GoogleFonts.lexend(fontWeight: FontWeight.w700),
-      bodyLarge: GoogleFonts.lexend(fontWeight: FontWeight.w500, fontSize: 16),
-      bodyMedium: GoogleFonts.lexend(fontWeight: FontWeight.w500),
-      labelLarge: GoogleFonts.lexend(fontWeight: FontWeight.w600),
+      titleLarge: GoogleFonts.lexend(fontWeight: FontWeight.w800, color: onSurface),
+      titleMedium: GoogleFonts.lexend(fontWeight: FontWeight.w700, color: onSurface),
+      bodyLarge: GoogleFonts.lexend(fontWeight: FontWeight.w500, fontSize: 16, color: onSurface),
+      bodyMedium: GoogleFonts.lexend(fontWeight: FontWeight.w500, color: onSurface),
+      labelLarge: GoogleFonts.lexend(fontWeight: FontWeight.w600, color: onSurface),
     );
 
     return base.copyWith(

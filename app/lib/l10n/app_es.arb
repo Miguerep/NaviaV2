@@ -1,0 +1,35 @@
+{
+  "@@locale": "es",
+  
+  "itineraryTitle": "Itinerario Diario",
+  "itineraryMapOverview": "Mapa · Toca para Explorar\nDestino: {destination}",
+  "itineraryNoPlan": "Aún no hay itinerario.",
+  "itineraryAudioError": "No se pudo reproducir el audio: {error}",
+  "itineraryAudioGuide": "Audioguía",
+  
+  "guideWelcome": "¡Hola! Dime qué te gustaría cambiar hoy.",
+  "guideTitle": "Guía",
+  "guideToday": "Hoy",
+  "guideHint": "Escribe tu petición...",
+
+  "profileTitle": "Perfil",
+  "profileAccessibility": "Herramientas de Accesibilidad",
+  "profileTextSize": "Tamaño del Texto",
+  "profileTextNormal": "Normal",
+  "profileTextLarge": "Grande",
+  "profileTextExtra": "Extra",
+  "profileVoiceSpeed": "Velocidad de Voz",
+  "profileVoiceGentle": "Suave",
+  "profileVoiceNormal": "Normal",
+  "profileVoiceFast": "Rápido",
+  "profileHighContrast": "Alto Contraste",
+  "profileHighContrastDesc": "Texto más fácil de leer",
+  "profileLanguage": "Idioma",
+  "profileLanguageDesc": "Elige el idioma de la app",
+  "profileTravelPrefs": "Preferencias de Viaje",
+  "profileHistory": "Historia",
+  "profileArt": "Arte",
+  "profileFood": "Comida",
+  "profileResetTrip": "Reiniciar viaje (ir al inicio)",
+  "profileSignOut": "Cerrar sesión de Explorer"
+}

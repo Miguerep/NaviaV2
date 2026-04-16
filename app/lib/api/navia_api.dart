@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class NaviaApi {
@@ -165,6 +166,38 @@ class NaviaApi {
       throw const FormatException('Invalid narration response format');
     }
     return NarrationSummaryResponse.fromJson(json);
+  }
+
+  Future<NarrationAudioResult> getNarrationAudio({
+    required NarrationSummaryRequest payload,
+    String? acceptLanguage,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/narration/audio');
+    final res = await http
+        .post(
+          uri,
+          headers: _headers(acceptLanguage: acceptLanguage),
+          body: jsonEncode(payload.toJson()),
+        )
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final body = utf8.decode(res.bodyBytes);
+      throw ApiError(res.statusCode, body);
+    }
+
+    final contentType = res.headers['content-type'] ?? '';
+    if (contentType.contains('audio/mpeg')) {
+      return NarrationAudioResult(audioBytes: res.bodyBytes);
+    }
+
+    // Fallback text
+    final body = utf8.decode(res.bodyBytes);
+    final json = jsonDecode(body);
+    if (json is Map<String, dynamic>) {
+      return NarrationAudioResult(textFallback: NarrationSummaryResponse.fromJson(json).text);
+    }
+    throw const FormatException('Invalid narration fallback response format');
   }
 
   Future<void> regenerateDayPlan({
@@ -493,4 +526,10 @@ class ChatEventText extends ChatEvent {
 class ChatEventActions extends ChatEvent {
   ChatEventActions(this.actions);
   final List<dynamic> actions;
+}
+
+class NarrationAudioResult {
+  NarrationAudioResult({this.audioBytes, this.textFallback});
+  final Uint8List? audioBytes;
+  final String? textFallback;
 }

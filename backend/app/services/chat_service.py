@@ -117,7 +117,7 @@ def run_ai_chat(
 
     try:
         response = client.models.generate_content(
-            model="gemini-flash-lite-latest",
+            model="gemini-flash-latest",
             contents=[_SYSTEM_PROMPT, context],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

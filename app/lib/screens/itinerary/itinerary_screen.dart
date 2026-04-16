@@ -10,6 +10,7 @@ import '../../providers/trip_provider.dart';
 import '../explore/explore_screen.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class ItineraryScreen extends StatelessWidget {
   const ItineraryScreen({super.key});
@@ -64,9 +65,11 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
         ? LatLng(lat, lng)
         : const LatLng(48.8566, 2.3522); // Safe fallback (Paris)
 
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daily Itinerary'),
+        title: Text(loc.itineraryTitle),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -120,7 +123,7 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
-                                'Map overview · Tap to Explore\nDestination: ${trip.destination ?? '-'}',
+                                loc.itineraryMapOverview(trip.destination ?? '-'),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -153,7 +156,7 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
           if (plan == null && !provider.loading) ...[
             const SizedBox(height: 12),
             Text(
-              'No itinerary yet.',
+              AppLocalizations.of(context)!.itineraryNoPlan,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: NaviaThemeTokens.onSurfaceVariant,
                   ),
@@ -168,7 +171,7 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
                   final tripId = trip.tripId;
                   if (tripId == null) return;
                   try {
-                    final summary = await api.getNarrationSummary(
+                    final audioRes = await api.getNarrationAudio(
                       payload: NarrationSummaryRequest(
                         tripId: tripId,
                         stopTitle: stop.title,
@@ -176,8 +179,20 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
                       ),
                       acceptLanguage: trip.acceptLanguage,
                     );
-                    await speech.speak(summary.text, speed: settings.voiceSpeed);
-                  } catch (_) {
+                    if (audioRes.audioBytes != null) {
+                      await speech.playAudioBytes(audioRes.audioBytes!);
+                    } else if (audioRes.textFallback != null) {
+                      await speech.speak(audioRes.textFallback!, speed: settings.voiceSpeed);
+                    }
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context)!.itineraryAudioError(e.toString())),
+                        backgroundColor: NaviaThemeTokens.error,
+                      ),
+                    );
+                    // Best-effort fallback
                     await speech.speak(
                       '${stop.title}. ${stop.subtitle ?? ''}'.trim(),
                       speed: settings.voiceSpeed,
@@ -259,7 +274,7 @@ class _StopCard extends StatelessWidget {
             ),
             onPressed: onAudio,
             icon: const Icon(Icons.headphones),
-            tooltip: 'Audio guide',
+            tooltip: AppLocalizations.of(context)!.itineraryAudioGuide,
           ),
         ],
       ),

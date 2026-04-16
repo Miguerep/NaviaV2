@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../app/app_settings.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,9 +44,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(loc.profileTitle),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -85,19 +87,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _sectionTitle(context, Icons.accessibility_new, 'Accessibility Tools'),
+          _sectionTitle(context, Icons.accessibility_new, loc.profileAccessibility),
           const SizedBox(height: 10),
           _card(
             child: Column(
               children: [
                 _sliderRow(
                   context,
-                  label: 'Text Size',
+                  label: loc.profileTextSize,
                   valueLabel: _sliderTextSize <= 1.5
-                      ? 'Normal'
+                      ? loc.profileTextNormal
                       : _sliderTextSize <= 2.5
-                          ? 'Large'
-                          : 'Extra',
+                          ? loc.profileTextLarge
+                          : loc.profileTextExtra,
                   iconStart: const Text('A'),
                   iconEnd: const Text('A', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                   value: _sliderTextSize,
@@ -111,12 +113,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 22),
                 _sliderRow(
                   context,
-                  label: 'Voice Speed',
+                  label: loc.profileVoiceSpeed,
                   valueLabel: _sliderVoice <= 1.5
-                      ? 'Gentle'
+                      ? loc.profileVoiceGentle
                       : _sliderVoice <= 2.5
-                          ? 'Normal'
-                          : 'Fast',
+                          ? loc.profileVoiceNormal
+                          : loc.profileVoiceFast,
                   iconStart: const Icon(Icons.slow_motion_video),
                   iconEnd: const Icon(Icons.directions_run),
                   value: _sliderVoice,
@@ -142,9 +144,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('High Contrast', style: Theme.of(context).textTheme.titleMedium),
+                            Text(loc.profileHighContrast, style: Theme.of(context).textTheme.titleMedium),
                             Text(
-                              'Easier to read text',
+                              loc.profileHighContrastDesc,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: NaviaThemeTokens.onSurfaceVariant,
                                   ),
@@ -176,9 +178,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Language', style: Theme.of(context).textTheme.titleMedium),
+                            Text(loc.profileLanguage, style: Theme.of(context).textTheme.titleMedium),
                             Text(
-                              'Choose the app language',
+                              loc.profileLanguageDesc,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: NaviaThemeTokens.onSurfaceVariant,
                                   ),
@@ -197,6 +199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final next = v ?? 'en';
                           setState(() => _lang = next);
                           await settings.setLocale(Locale(next));
+                          if (!context.mounted) return;
                           context.read<TripProvider>().setAcceptLanguage(next);
                         },
                       ),
@@ -207,15 +210,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _sectionTitle(context, Icons.favorite, 'Travel Preferences'),
+          _sectionTitle(context, Icons.favorite, loc.profileTravelPrefs),
           const SizedBox(height: 10),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
-              _prefChip(context, 'History', selected: true),
-              _prefChip(context, 'Art', selected: false),
-              _prefChip(context, 'Food', selected: true),
+              _prefChip(context, loc.profileHistory, selected: true, isHistory: true),
+              _prefChip(context, loc.profileArt, selected: false, isArt: true),
+              _prefChip(context, loc.profileFood, selected: true, isFood: true),
             ],
           ),
           const SizedBox(height: 24),
@@ -223,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () {
               context.read<TripProvider>().reset();
             },
-            child: const Text('Reset trip (go to onboarding)'),
+            child: Text(loc.profileResetTrip),
           ),
           const SizedBox(height: 12),
           FilledButton(
@@ -232,12 +235,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               foregroundColor: NaviaThemeTokens.error,
             ),
             onPressed: () {},
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.logout),
-                SizedBox(width: 8),
-                Text('Sign Out of Explorer'),
+                const Icon(Icons.logout),
+                const SizedBox(width: 8),
+                Text(loc.profileSignOut),
               ],
             ),
           ),
@@ -322,7 +325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _prefChip(BuildContext context, String label, {required bool selected}) {
+  Widget _prefChip(BuildContext context, String label, {required bool selected, bool isHistory = false, bool isArt = false, bool isFood = false}) {
     return Container(
       width: 120,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -335,9 +338,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           Icon(
-            label == 'History'
+            isHistory
                 ? Icons.history_edu
-                : label == 'Art'
+                : isArt
                     ? Icons.palette
                     : Icons.restaurant,
             color: selected ? NaviaThemeTokens.primary : NaviaThemeTokens.onSurfaceVariant,

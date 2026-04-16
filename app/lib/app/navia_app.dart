@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../app/app_settings.dart';
 import '../api/navia_api.dart';
 import '../providers/trip_provider.dart';
@@ -134,14 +136,12 @@ class _NaviaAppState extends State<NaviaApp> {
         theme: NaviaTheme.light(highContrast: settings.highContrast),
         locale: settings.locale,
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('en'),
-          Locale('es'),
-        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
         builder: (context, child) {

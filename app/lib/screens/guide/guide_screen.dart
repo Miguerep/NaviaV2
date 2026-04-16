@@ -9,6 +9,7 @@ import '../../providers/itinerary_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class GuideScreen extends StatefulWidget {
   const GuideScreen({super.key});
@@ -31,7 +32,7 @@ class _GuideScreenState extends State<GuideScreen> {
       _isInit = true;
       final chat = context.read<ChatProvider>();
       if (chat.messages.isEmpty) {
-        chat.addSystemMessage('Hi! Tell me what you’d like to change today.');
+        chat.addSystemMessage(AppLocalizations.of(context)!.guideWelcome);
       }
     }
   }
@@ -127,9 +128,11 @@ class _GuideScreenState extends State<GuideScreen> {
     final sending = chat.loading;
     final msgs = chat.messages;
 
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Guide'),
+        title: Text(loc.guideTitle),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -165,7 +168,7 @@ class _GuideScreenState extends State<GuideScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        'Today',
+                        loc.guideToday,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: NaviaThemeTokens.onSurfaceVariant,
                             ),
@@ -232,8 +235,8 @@ class _GuideScreenState extends State<GuideScreen> {
                       controller: _controller,
                       onSubmitted: (_) => _send(),
                       enabled: !sending,
-                      decoration: const InputDecoration(
-                        hintText: 'Type your request...',
+                      decoration: InputDecoration(
+                        hintText: loc.guideHint,
                       ),
                     ),
                   ),

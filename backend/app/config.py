@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./backend.db"
     gemini_api_key: str = ""
+    elevenlabs_api_key: str = ""
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:8787",

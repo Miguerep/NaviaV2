@@ -1,0 +1,50 @@
+{
+  "@@locale": "en",
+  
+  "itineraryTitle": "Daily Itinerary",
+  "itineraryMapOverview": "Map overview · Tap to Explore\nDestination: {destination}",
+  "@itineraryMapOverview": {
+    "placeholders": {
+      "destination": {
+        "type": "String",
+        "example": "Paris"
+      }
+    }
+  },
+  "itineraryNoPlan": "No itinerary yet.",
+  "itineraryAudioError": "Could not play audio: {error}",
+  "@itineraryAudioError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "itineraryAudioGuide": "Audio guide",
+  
+  "guideWelcome": "Hi! Tell me what you'd like to change today.",
+  "guideTitle": "Guide",
+  "guideToday": "Today",
+  "guideHint": "Type your request...",
+
+  "profileTitle": "Profile",
+  "profileAccessibility": "Accessibility Tools",
+  "profileTextSize": "Text Size",
+  "profileTextNormal": "Normal",
+  "profileTextLarge": "Large",
+  "profileTextExtra": "Extra",
+  "profileVoiceSpeed": "Voice Speed",
+  "profileVoiceGentle": "Gentle",
+  "profileVoiceNormal": "Normal",
+  "profileVoiceFast": "Fast",
+  "profileHighContrast": "High Contrast",
+  "profileHighContrastDesc": "Easier to read text",
+  "profileLanguage": "Language",
+  "profileLanguageDesc": "Choose the app language",
+  "profileTravelPrefs": "Travel Preferences",
+  "profileHistory": "History",
+  "profileArt": "Art",
+  "profileFood": "Food",
+  "profileResetTrip": "Reset trip (go to onboarding)",
+  "profileSignOut": "Sign Out of Explorer"
+}
