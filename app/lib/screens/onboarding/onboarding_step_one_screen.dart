@@ -481,7 +481,7 @@ class _NextStepBottomBar extends StatelessWidget {
             label: 'Next Step',
             icon: Icons.arrow_forward,
             onTap: () {
-              context.go('/onboarding/destination');
+              context.go('/app/explore');
             },
           ),
         ),

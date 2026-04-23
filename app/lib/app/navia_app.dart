@@ -52,7 +52,7 @@ class _NaviaAppState extends State<NaviaApp> {
 
   GoRouter _buildRouter() {
     return GoRouter(
-      initialLocation: '/onboarding/step-one',
+      initialLocation: '/onboarding/destination',
       refreshListenable: context.read<TripProvider>(),
       routes: [
         GoRoute(
@@ -118,6 +118,9 @@ class _NaviaAppState extends State<NaviaApp> {
 
         if (state.matchedLocation == '/onboarding/dates' && tripProvider.destination == null) {
             return '/onboarding/destination';
+        }
+        if (state.matchedLocation == '/onboarding/step-one' && tripProvider.tripDates == null) {
+            return '/onboarding/dates';
         }
 
         return null;
