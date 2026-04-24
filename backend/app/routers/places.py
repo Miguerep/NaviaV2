@@ -20,3 +20,12 @@ async def get_route(
     to: str = Query(...),
 ):
     return await osm_service.get_walking_route(from_, to)
+
+
+# Alias used by navia_api.dart → getRouteWalking() calls /v1/osm/route
+@router.get("/osm/route")
+async def get_osm_route(
+    from_: str = Query(..., alias="from"),
+    to: str = Query(...),
+):
+    return await osm_service.get_walking_route(from_, to)

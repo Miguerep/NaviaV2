@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
 class NaviaApi {
   NaviaApi({required this.baseUrl});
@@ -336,15 +337,39 @@ class GeoPoint {
 }
 
 class RouteResult {
-  RouteResult({required this.distanceMeters, required this.durationSeconds});
+  RouteResult({
+    required this.distanceMeters,
+    required this.durationSeconds,
+    this.polyline = const [],
+  });
 
   final double? distanceMeters;
   final double? durationSeconds;
+  /// Decoded polyline points from the GeoJSON geometry.
+  final List<LatLng> polyline;
 
   factory RouteResult.fromJson(Map<String, dynamic> json) {
+    // Parse GeoJSON LineString coordinates [[lng,lat], ...]
+    final geometry = json['geometry'];
+    final coords = (geometry is Map<String, dynamic>)
+        ? (geometry['coordinates'] as List<dynamic>?)
+        : null;
+    final polyline = coords
+            ?.whereType<List<dynamic>>()
+            .map((c) {
+              if (c.length < 2) return null;
+              final lng = (c[0] as num?)?.toDouble();
+              final lat = (c[1] as num?)?.toDouble();
+              if (lat == null || lng == null) return null;
+              return LatLng(lat, lng);
+            })
+            .whereType<LatLng>()
+            .toList(growable: false) ??
+        const [];
     return RouteResult(
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
       durationSeconds: (json['durationSeconds'] as num?)?.toDouble(),
+      polyline: polyline,
     );
   }
 }

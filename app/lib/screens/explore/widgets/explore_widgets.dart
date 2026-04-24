@@ -55,10 +55,17 @@ class ExploreMap extends StatelessWidget {
     super.key,
     required this.mapController,
     required this.places,
+    required this.initialCenter,
+    this.initialZoom = 13,
   });
 
   final MapController mapController;
   final List<PlaceResult> places;
+
+  /// The map centre shown when the screen first opens.
+  /// Should be derived from the trip's start coordinates or geocoded city.
+  final LatLng initialCenter;
+  final double initialZoom;
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +94,9 @@ class ExploreMap extends StatelessWidget {
 
     return FlutterMap(
       mapController: mapController,
-      options: const MapOptions(
-        initialCenter: LatLng(48.8566, 2.3522),
-        initialZoom: 12,
+      options: MapOptions(
+        initialCenter: initialCenter,
+        initialZoom: initialZoom,
       ),
       children: [
         TileLayer(

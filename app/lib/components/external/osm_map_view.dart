@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../theme/navia_theme.dart';
+
 class OsmMapView extends StatefulWidget {
   const OsmMapView({
     super.key,
@@ -9,6 +11,7 @@ class OsmMapView extends StatefulWidget {
     this.mapController,
     this.zoom = 13,
     this.markers = const <Marker>[],
+    this.polyline = const <LatLng>[],
     this.interactiveFlags = InteractiveFlag.all,
   });
 
@@ -16,6 +19,9 @@ class OsmMapView extends StatefulWidget {
   final MapController? mapController;
   final double zoom;
   final List<Marker> markers;
+
+  /// If non-empty, draws a coloured walking route polyline over the map.
+  final List<LatLng> polyline;
   final int interactiveFlags;
 
   @override
@@ -54,9 +60,20 @@ class _OsmMapViewState extends State<OsmMapView> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.navia.navia_app',
         ),
+        if (widget.polyline.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.polyline,
+                color: NaviaThemeTokens.primary,
+                strokeWidth: 5,
+                borderColor: NaviaThemeTokens.primary.withValues(alpha: 0.25),
+                borderStrokeWidth: 10,
+              ),
+            ],
+          ),
         if (widget.markers.isNotEmpty) MarkerLayer(markers: widget.markers),
       ],
     );
   }
 }
-

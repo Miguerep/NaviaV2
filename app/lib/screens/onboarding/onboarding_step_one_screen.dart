@@ -422,22 +422,27 @@ class _PaceChip extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(
-              option.label,
-              style: GoogleFonts.lexend(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: isActive
-                    ? NaviaThemeTokens.primary
-                    : NaviaThemeTokens.onSurface,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                option.label,
+                style: GoogleFonts.lexend(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isActive
+                      ? NaviaThemeTokens.primary
+                      : NaviaThemeTokens.onSurface,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               option.subtitle,
               textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
               style: GoogleFonts.lexend(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: NaviaThemeTokens.onSurfaceVariant,
               ),

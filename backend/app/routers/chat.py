@@ -15,17 +15,13 @@ router = APIRouter(prefix="/v1", tags=["chat"])
 
 @router.post("/chat")
 async def chat(payload: ChatRequest, session: Session = Depends(get_session)):
-    # Validate trip exists then run full AI pipeline in a thread
-    def _run():
-        get_trip_or_404(session, payload.tripId)
-        return chat_service.handle_chat(
-            session=session,
-            trip_id=payload.tripId,
-            plan_day=payload.activeDate,
-            user_message=payload.userMessage,
-        )
-
-    assistant_text, actions = await asyncio.to_thread(_run)
+    get_trip_or_404(session, payload.tripId)
+    assistant_text, actions = await chat_service.handle_chat(
+        session=session,
+        trip_id=payload.tripId,
+        plan_day=payload.activeDate,
+        user_message=payload.userMessage,
+    )
 
     # Stream the response word-by-word via SSE
     async def event_stream():

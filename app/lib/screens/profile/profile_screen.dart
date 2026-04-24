@@ -237,10 +237,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () {},
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.logout),
                 const SizedBox(width: 8),
-                Text(loc.profileSignOut),
+                Flexible(
+                  child: Text(
+                    loc.profileSignOut,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -254,7 +260,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Icon(icon, color: NaviaThemeTokens.primary),
         const SizedBox(width: 10),
-        Text(text, style: Theme.of(context).textTheme.titleLarge),
+        Flexible(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.titleLarge,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+        ),
       ],
     );
   }
@@ -292,9 +305,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: Theme.of(context).textTheme.titleMedium),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
             Text(
               valueLabel,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -327,8 +346,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _prefChip(BuildContext context, String label, {required bool selected, bool isHistory = false, bool isArt = false, bool isFood = false}) {
     return Container(
-      width: 120,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      // No fixed width — adapts to text length
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: selected
             ? NaviaThemeTokens.primary.withValues(alpha: 0.12)
@@ -336,6 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isHistory
@@ -346,7 +366,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: selected ? NaviaThemeTokens.primary : NaviaThemeTokens.onSurfaceVariant,
           ),
           const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 6),
           Icon(
             selected ? Icons.check_circle : Icons.circle_outlined,

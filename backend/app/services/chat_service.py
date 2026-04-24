@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -11,6 +12,7 @@ from app.config import settings
 from app.models import ChatMessage, ChatRole, DayPlan, Stop
 from app.services.trip_service import get_trip_or_404
 from app.services.itinerary_service import replace_stops
+from app.services import wikipedia_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ Rules:
 - Each stop must have: "title" (string), "subtitle" (string or null), "startTimeLocal" (HH:MM string or null).
 - If no itinerary change is needed, set "rewrite" to false and leave "stops" as [].
 - Keep "reply" concise and friendly (1–3 sentences).
+- When a "Wikipedia context" section is provided, use it to enrich your answers with accurate facts about the destination. Do NOT copy it verbatim; synthesise naturally.
 
 Respond ONLY with valid JSON matching this exact schema (no markdown, no code fences):
 {
@@ -72,7 +75,7 @@ Respond ONLY with valid JSON matching this exact schema (no markdown, no code fe
 """
 
 
-def run_ai_chat(
+async def run_ai_chat(
     session: Session,
     trip_id: str,
     plan_day: date,
@@ -107,13 +110,23 @@ def run_ai_chat(
         logger.warning("GEMINI_API_KEY not set; returning static fallback reply.")
         return "I can help adjust your itinerary! Please add a Gemini API key to enable AI features.", []
 
-    context = (
+    # Fetch Wikipedia summary concurrently — does not block if it fails
+    wiki_summary = await wikipedia_service.get_destination_summary(destination)
+
+    context_parts = [
         "Trip context (must be respected):\n"
-        + json.dumps(trip_context, ensure_ascii=False, indent=2)
-        + f"\n\nCurrent itinerary for {plan_day.isoformat()}:\n"
-        + json.dumps(current_stops, ensure_ascii=False, indent=2)
-        + f"\n\nUser message: {user_message}"
-    )
+        + json.dumps(trip_context, ensure_ascii=False, indent=2),
+        f"Current itinerary for {plan_day.isoformat()}:\n"
+        + json.dumps(current_stops, ensure_ascii=False, indent=2),
+    ]
+    if wiki_summary:
+        logger.debug("Wikipedia context injected for %r (%d chars)", destination, len(wiki_summary))
+        context_parts.append(f"Wikipedia context about {destination}:\n{wiki_summary}")
+    else:
+        logger.debug("No Wikipedia context available for %r", destination)
+
+    context_parts.append(f"User message: {user_message}")
+    context = "\n\n".join(context_parts)
 
     try:
         response = client.models.generate_content(
@@ -147,14 +160,14 @@ def run_ai_chat(
 # Public API (called from the router)
 # ---------------------------------------------------------------------------
 
-def handle_chat(
+async def handle_chat(
     session: Session,
     trip_id: str,
     plan_day: date,
     user_message: str,
 ) -> tuple[str, list[dict]]:
     """Full chat pipeline: AI → apply actions → persist messages → single commit."""
-    assistant_text, actions = run_ai_chat(session, trip_id, plan_day, user_message)
+    assistant_text, actions = await run_ai_chat(session, trip_id, plan_day, user_message)
 
     # Apply itinerary changes (no auto-commit inside replace_stops)
     replace_action = next((a for a in actions if a.get("type") == "ReplaceDayPlan"), None)

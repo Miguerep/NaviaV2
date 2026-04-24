@@ -1,5 +1,6 @@
-Route time Googe api prices
-Controlar tiempos de viaje
-Añadir mas info si el usuario lo pide
-Buscar info de wikipedia o google maps para crear una descripcion mas detallada de los lugares
-OSR tiene calculo de rutas?
+Cuando tocas el mapa superior debe llevarte a la pagina de explorar.
+Debe de crear los POIs en el mapa de explore.
+Calcular la ruta al POI cuando se toca el botón.
+Al cerrar el viaje debe empezar con el onboarding otra vez.
+Arreglar onboarding para que coja las preferencias.
+Optimizar tiempos de carga y procesos.

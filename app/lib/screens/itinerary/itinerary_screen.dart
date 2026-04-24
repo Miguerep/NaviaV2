@@ -11,6 +11,7 @@ import '../explore/explore_screen.dart';
 import '../../services/speech_service.dart';
 import '../../theme/navia_theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'route_map_sheet.dart';
 
 class ItineraryScreen extends StatelessWidget {
   const ItineraryScreen({super.key});
@@ -167,6 +168,7 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
               const SizedBox(height: 14),
               _StopCard(
                 stop: stop,
+                onRoute: () => RouteMapSheet.show(context, stop),
                 onAudio: () async {
                   final tripId = trip.tripId;
                   if (tripId == null) return;
@@ -209,10 +211,15 @@ class _ItineraryScreenBodyState extends State<_ItineraryScreenBody> {
 }
 
 class _StopCard extends StatelessWidget {
-  const _StopCard({required this.stop, required this.onAudio});
+  const _StopCard({
+    required this.stop,
+    required this.onAudio,
+    required this.onRoute,
+  });
 
   final Stop stop;
   final VoidCallback onAudio;
+  final VoidCallback onRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -266,11 +273,21 @@ class _StopCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          IconButton.outlined(
+            style: IconButton.styleFrom(
+              foregroundColor: NaviaThemeTokens.primary,
+              fixedSize: const Size(52, 52),
+            ),
+            onPressed: onRoute,
+            icon: const Icon(Icons.directions_walk),
+            tooltip: 'Walk there',
+          ),
+          const SizedBox(width: 8),
           IconButton.filled(
             style: IconButton.styleFrom(
               backgroundColor: NaviaThemeTokens.primary,
               foregroundColor: Colors.white,
-              fixedSize: const Size(56, 56),
+              fixedSize: const Size(52, 52),
             ),
             onPressed: onAudio,
             icon: const Icon(Icons.headphones),
