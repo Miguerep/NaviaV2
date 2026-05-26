@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -14,19 +16,16 @@ class ExploreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) {
-        final p = ExploreProvider(context.read<NaviaApi>());
-        final trip = context.read<TripProvider>();
-        final lat = trip.startLat;
-        final lng = trip.startLng;
-        if (lat != null && lng != null) {
-          p.setUserLocation(GeoPoint(lat: lat, lng: lng));
-        }
-        return p;
-      },
-      child: const _ExploreScreenUI(),
-    );
+    // Use the app-level ExploreProvider (hoisted to main.dart).
+    // Seed user location from the trip GPS if available.
+    final trip = context.read<TripProvider>();
+    final explore = context.read<ExploreProvider>();
+    final lat = trip.startLat;
+    final lng = trip.startLng;
+    if (lat != null && lng != null) {
+      explore.setUserLocation(GeoPoint(lat: lat, lng: lng));
+    }
+    return const _ExploreScreenUI();
   }
 }
 
@@ -49,12 +48,57 @@ class _ExploreScreenUIState extends State<_ExploreScreenUI> {
   void initState() {
     super.initState();
     _resolveInitialCenter();
+
+    // Listen for active route changes and move the map accordingly.
+    final explore = context.read<ExploreProvider>();
+    explore.addListener(_onExploreChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    context.read<ExploreProvider>().removeListener(_onExploreChanged);
     super.dispose();
+  }
+
+  /// React to active route being set from the itinerary screen.
+  void _onExploreChanged() {
+    final explore = context.read<ExploreProvider>();
+    if (explore.hasActiveRoute) {
+      final route = explore.activeRoute!;
+      final polyline = route.polyline;
+      if (polyline.length > 1) {
+        // Fit to the route polyline bounds
+        final center = _polylineCenter(polyline);
+        final zoom = _zoomForPolyline(polyline);
+        _mapController.move(center, zoom);
+      } else if (explore.activeDestination != null) {
+        _mapController.move(explore.activeDestination!, 15);
+      }
+    }
+  }
+
+  LatLng _polylineCenter(List<LatLng> polyline) {
+    final lats = polyline.map((p) => p.latitude);
+    final lngs = polyline.map((p) => p.longitude);
+    return LatLng(
+      (lats.reduce(math.min) + lats.reduce(math.max)) / 2,
+      (lngs.reduce(math.min) + lngs.reduce(math.max)) / 2,
+    );
+  }
+
+  double _zoomForPolyline(List<LatLng> points) {
+    if (points.length < 2) return 14;
+    final lats = points.map((p) => p.latitude);
+    final lngs = points.map((p) => p.longitude);
+    final latSpan = lats.reduce(math.max) - lats.reduce(math.min);
+    final lngSpan = lngs.reduce(math.max) - lngs.reduce(math.min);
+    final span = math.max(latSpan, lngSpan);
+    if (span < 0.005) return 15;
+    if (span < 0.02) return 14;
+    if (span < 0.05) return 13;
+    if (span < 0.1) return 12;
+    return 11;
   }
 
   /// Determine the best initial map centre:
@@ -145,8 +189,15 @@ class _ExploreScreenUIState extends State<_ExploreScreenUI> {
     return Scaffold(
       appBar: AppBar(
         title: Text(trip.destination ?? 'Explore'),
-        actions: const [
-          Padding(
+        actions: [
+          // Show a "clear route" button when a walk route is active
+          if (provider.hasActiveRoute)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Clear route',
+              onPressed: () => provider.clearActiveRoute(),
+            ),
+          const Padding(
             padding: EdgeInsets.only(right: 12),
             child: Icon(Icons.mic),
           ),
@@ -169,6 +220,13 @@ class _ExploreScreenUIState extends State<_ExploreScreenUI> {
               ),
               onSubmitted: _onSearch,
             ),
+
+            // ── Active route info banner ──────────────────────────
+            if (provider.hasActiveRoute) ...[
+              const SizedBox(height: 12),
+              _ActiveRouteBanner(provider: provider),
+            ],
+
             const SizedBox(height: 16),
             Expanded(
               child: ClipRRect(
@@ -182,6 +240,7 @@ class _ExploreScreenUIState extends State<_ExploreScreenUI> {
                         places: provider.results,
                         initialCenter: center,
                         initialZoom: zoom,
+                        activeRoute: provider,
                       ),
                     ),
 
@@ -213,6 +272,74 @@ class _ExploreScreenUIState extends State<_ExploreScreenUI> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Active route banner ───────────────────────────────────────────────────────
+
+class _ActiveRouteBanner extends StatelessWidget {
+  const _ActiveRouteBanner({required this.provider});
+  final ExploreProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final route = provider.activeRoute;
+    final name = provider.activeDestinationName ?? 'destination';
+
+    final dist = route?.distanceMeters;
+    final dur = route?.durationSeconds;
+    final distStr = dist == null
+        ? '—'
+        : dist < 1000
+            ? '${dist.round()} m'
+            : '${(dist / 1000).toStringAsFixed(1)} km';
+    final durStr = dur == null ? '—' : '${(dur / 60).round()} min';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: NaviaThemeTokens.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: NaviaThemeTokens.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.directions_walk, color: NaviaThemeTokens.primary, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Walking to $name',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: NaviaThemeTokens.onSurface,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$distStr · $durStr',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: NaviaThemeTokens.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            color: NaviaThemeTokens.onSurfaceVariant,
+            onPressed: () => provider.clearActiveRoute(),
+          ),
+        ],
       ),
     );
   }

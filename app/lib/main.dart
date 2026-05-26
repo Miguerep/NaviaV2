@@ -6,6 +6,7 @@ import 'app/app_settings.dart';
 import 'app/navia_app.dart';
 import 'config/app_env.dart';
 import 'providers/chat_provider.dart';
+import 'providers/explore_provider.dart';
 import 'providers/itinerary_provider.dart';
 import 'providers/trip_provider.dart';
 import 'services/speech_service.dart';
@@ -20,6 +21,9 @@ void main() {
         ChangeNotifierProvider<TripProvider>(create: (_) => TripProvider()),
         ChangeNotifierProvider<ItineraryProvider>(
           create: (context) => ItineraryProvider(api: context.read<NaviaApi>()),
+        ),
+        ChangeNotifierProvider<ExploreProvider>(
+          create: (context) => ExploreProvider(context.read<NaviaApi>()),
         ),
         ChangeNotifierProvider<ChatProvider>(
           create: (context) => ChatProvider(context.read<NaviaApi>()),

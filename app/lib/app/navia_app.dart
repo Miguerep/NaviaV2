@@ -12,7 +12,7 @@ import '../screens/explore/explore_screen.dart';
 import '../screens/guide/guide_screen.dart';
 import '../screens/itinerary/itinerary_screen.dart';
 import '../screens/onboarding/destination_screen.dart';
-import '../screens/onboarding/onboarding_step_one_screen.dart';
+import '../screens/onboarding/onboarding_preferences_screen.dart';
 import '../screens/onboarding/trip_dates_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../theme/navia_theme.dart';
@@ -31,17 +31,23 @@ class _NaviaAppState extends State<NaviaApp> {
   void initState() {
     super.initState();
     _router = _buildRouter();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final locale = WidgetsBinding.instance.platformDispatcher.locale;
       final languageTag = locale.toLanguageTag();
       final trip = context.read<TripProvider>();
       trip.setAcceptLanguage(languageTag);
-      trip.restoreTripIdFromStorage();
+      // Touch NaviaApi so it's available in the tree early.
+      context.read<NaviaApi>();
+      
+      await trip.restoreTripIdFromStorage();
+
+      if (trip.hasTrip && mounted) {
+        _router.go('/app/explore');
+      }
+
       // Fire-and-forget: request permission + capture coords.
       trip.initLocation();
-      // Touch NaviaApi so it's available in the tree.
-      context.read<NaviaApi>();
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,12 +59,7 @@ class _NaviaAppState extends State<NaviaApp> {
   GoRouter _buildRouter() {
     return GoRouter(
       initialLocation: '/onboarding/destination',
-      refreshListenable: context.read<TripProvider>(),
       routes: [
-        GoRoute(
-          path: '/onboarding/step-one',
-          builder: (context, state) => const OnboardingStepOneScreen(),
-        ),
         GoRoute(
           path: '/onboarding/destination',
           builder: (context, state) => const DestinationScreen(),
@@ -66,6 +67,10 @@ class _NaviaAppState extends State<NaviaApp> {
         GoRoute(
           path: '/onboarding/dates',
           builder: (context, state) => const TripDatesScreen(),
+        ),
+        GoRoute(
+          path: '/onboarding/preferences',
+          builder: (context, state) => const OnboardingPreferencesScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) => _AppShell(
@@ -113,13 +118,13 @@ class _NaviaAppState extends State<NaviaApp> {
         final isInApp = state.matchedLocation.startsWith('/app/');
         final isInOnboarding = state.matchedLocation.startsWith('/onboarding/');
 
-        if (!hasTrip && isInApp) return '/onboarding/step-one';
+        if (!hasTrip && isInApp) return '/onboarding/destination';
         if (hasTrip && isInOnboarding) return '/app/explore';
 
         if (state.matchedLocation == '/onboarding/dates' && tripProvider.destination == null) {
             return '/onboarding/destination';
         }
-        if (state.matchedLocation == '/onboarding/step-one' && tripProvider.tripDates == null) {
+        if (state.matchedLocation == '/onboarding/preferences' && tripProvider.tripDates == null) {
             return '/onboarding/dates';
         }
 

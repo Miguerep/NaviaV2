@@ -35,6 +35,11 @@ class RegeneratePlanRequest(BaseModel):
     reason: str | None = None
 
 
+class UpdateTripPreferencesRequest(BaseModel):
+    interests: list[str] = []
+    pace: str | None = None
+
+
 class ChatRequest(BaseModel):
     tripId: str
     activeDate: date

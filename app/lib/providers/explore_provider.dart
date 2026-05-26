@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../api/navia_api.dart';
 
 class ExploreProvider extends ChangeNotifier {
@@ -10,6 +11,18 @@ class ExploreProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   List<PlaceResult> _results = [];
+
+  // ── Active walking route (set from itinerary "walk" button) ──────────
+  RouteResult? _activeRoute;
+  LatLng? _activeOrigin;
+  LatLng? _activeDestination;
+  String? _activeDestinationName;
+
+  RouteResult? get activeRoute => _activeRoute;
+  LatLng? get activeOrigin => _activeOrigin;
+  LatLng? get activeDestination => _activeDestination;
+  String? get activeDestinationName => _activeDestinationName;
+  bool get hasActiveRoute => _activeRoute != null;
   
   bool get loading => _loading;
   String? get error => _error;
@@ -26,10 +39,44 @@ class ExploreProvider extends ChangeNotifier {
     }
   }
 
+  /// Set a pre-computed walking route to be displayed on the explore map.
+  /// Called from the itinerary screen when the user taps "walk".
+  void setActiveRoute({
+    required RouteResult route,
+    required LatLng origin,
+    required LatLng destination,
+    required String destinationName,
+  }) {
+    _activeRoute = route;
+    _activeOrigin = origin;
+    _activeDestination = destination;
+    _activeDestinationName = destinationName;
+    // Clear search results so the route overlay is prominent
+    _results = [];
+    _error = null;
+    notifyListeners();
+  }
+
+  /// Clear the active navigation route.
+  void clearActiveRoute() {
+    if (_activeRoute == null) return;
+    _activeRoute = null;
+    _activeOrigin = null;
+    _activeDestination = null;
+    _activeDestinationName = null;
+    notifyListeners();
+  }
+
   Future<void> search(String query) async {
     final q = query.trim();
     if (q.isEmpty) return;
     
+    // Clear any active route when doing a new search
+    _activeRoute = null;
+    _activeOrigin = null;
+    _activeDestination = null;
+    _activeDestinationName = null;
+
     _loading = true;
     _error = null;
     notifyListeners();

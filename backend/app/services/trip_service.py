@@ -42,6 +42,19 @@ def get_trip_or_404(session: Session, trip_id: str) -> Trip:
     return trip
 
 
+def update_trip_preferences(session: Session, trip_id: str, interests: list[str], pace: str | None) -> dict:
+    """Patch interests and pace on an existing trip."""
+    trip = get_trip_or_404(session, trip_id)
+    trip.interests_csv = ",".join([i.strip() for i in interests if i.strip()]) or None
+    if pace is not None:
+        trip.pace = pace
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    return _serialise_trip(trip)
+
+
+
 def _serialise_trip(trip: Trip) -> dict:
     return {
         "id": trip.id,

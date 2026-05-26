@@ -153,7 +153,7 @@ class _TripDatesScreenState extends State<TripDatesScreen> {
                         );
                         trip.setTripId(created.id);
                         if (!context.mounted) return;
-                        context.go('/onboarding/step-one');
+                        context.go('/onboarding/preferences');
                       } catch (_) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(

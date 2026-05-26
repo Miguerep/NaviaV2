@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_settings.dart';
@@ -225,6 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           FilledButton.tonal(
             onPressed: () {
               context.read<TripProvider>().reset();
+              context.go('/onboarding/destination');
             },
             child: Text(loc.profileResetTrip),
           ),

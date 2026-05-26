@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../api/navia_api.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/navia_theme.dart';
 
@@ -71,8 +72,8 @@ const _kPaces = [
 // SCREEN
 // ──────────────────────────────────────────────────────────────
 
-class OnboardingStepOneScreen extends StatelessWidget {
-  const OnboardingStepOneScreen({super.key});
+class OnboardingPreferencesScreen extends StatelessWidget {
+  const OnboardingPreferencesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +216,7 @@ class _OnboardingHeader extends StatelessWidget {
 
           // Step label
           Text(
-            'Step 1 of 3',
+            'Step 3 of 3',
             style: GoogleFonts.lexend(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -230,9 +231,9 @@ class _OnboardingHeader extends StatelessWidget {
             children: [
               _progressDot(active: true),
               const SizedBox(width: 8),
-              _progressDot(active: false),
+              _progressDot(active: true),
               const SizedBox(width: 8),
-              _progressDot(active: false),
+              _progressDot(active: true),
             ],
           ),
         ],
@@ -458,8 +459,50 @@ class _PaceChip extends StatelessWidget {
 // BOTTOM BAR – glassmorphic with gradient button
 // ──────────────────────────────────────────────────────────────
 
-class _NextStepBottomBar extends StatelessWidget {
+class _NextStepBottomBar extends StatefulWidget {
   const _NextStepBottomBar();
+
+  @override
+  State<_NextStepBottomBar> createState() => _NextStepBottomBarState();
+}
+
+class _NextStepBottomBarState extends State<_NextStepBottomBar> {
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _finish() async {
+    final trip = context.read<TripProvider>();
+    final tripId = trip.tripId;
+    if (tripId == null) {
+      // Fallback: skip API call and go to app.
+      if (context.mounted) context.go('/app/explore');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final api = context.read<NaviaApi>();
+      final router = GoRouter.of(context);
+      await api.updateTripPreferences(
+        tripId: tripId,
+        interests: trip.interests.toList(growable: false),
+        pace: trip.pace,
+        acceptLanguage: trip.acceptLanguage,
+      );
+      if (!mounted) return;
+      router.go('/app/explore');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not save preferences. Tap to retry.';
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -482,12 +525,26 @@ class _NextStepBottomBar extends StatelessWidget {
               ),
             ),
           ),
-          child: _GradientButton(
-            label: 'Next Step',
-            icon: Icons.arrow_forward,
-            onTap: () {
-              context.go('/app/explore');
-            },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.lexend(
+                    fontSize: 13,
+                    color: NaviaThemeTokens.error,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              _GradientButton(
+                label: _loading ? 'Saving…' : "Let's go!",
+                icon: Icons.rocket_launch_rounded,
+                onTap: _loading ? () {} : _finish,
+              ),
+            ],
           ),
         ),
       ),

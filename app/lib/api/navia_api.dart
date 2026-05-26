@@ -113,6 +113,38 @@ class NaviaApi {
     return Trip.fromJson(tripJson);
   }
 
+  Future<Trip> updateTripPreferences({
+    required String tripId,
+    required List<String> interests,
+    required String pace,
+    String? acceptLanguage,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/trips/$tripId/preferences');
+    final res = await http
+        .patch(
+          uri,
+          headers: _headers(acceptLanguage: acceptLanguage),
+          body: jsonEncode({'interests': interests, 'pace': pace}),
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = utf8.decode(res.bodyBytes);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiError(res.statusCode, body);
+    }
+
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) {
+      throw const FormatException('Invalid updateTripPreferences response format');
+    }
+    final tripJson = json['trip'];
+    if (tripJson is! Map<String, dynamic>) {
+      throw const FormatException('Invalid updateTripPreferences response payload');
+    }
+    return Trip.fromJson(tripJson);
+  }
+
+
   Future<DayPlan> getDayPlan({
     required String tripId,
     required DateTime day,
